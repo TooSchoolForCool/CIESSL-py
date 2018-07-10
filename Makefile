@@ -7,3 +7,6 @@ install:
 remove:
 	rm -rf build ciessl.egg-info dist
 	sudo pip2 uninstall ciessl
+
+dev:
+	sudo pip2 install -e .
