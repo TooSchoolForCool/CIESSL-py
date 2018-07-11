@@ -1,6 +1,9 @@
 # MacOS system file
 .DS_Store
 
+# ignore all .wav file in example/
+example/*.wav
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
