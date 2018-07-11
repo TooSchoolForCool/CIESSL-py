@@ -70,6 +70,13 @@ class MicArray(object):
         self.quit_event_.set()
         self.stream_.stop_stream()
 
+        # let read_chunks out of blocking when 
+        # there is no input into queue any more
+        self.queue_cond_.acquire()
+        self.queue_.append("")
+        self.queue_cond_.notify()
+        self.queue_cond_.release()
+
 
     def read_chunks(self):
         if not self.stream_.is_active():
@@ -86,7 +93,7 @@ class MicArray(object):
 
             self.queue_cond_.release()
 
-            # if chunk is empty, then stop reading from device
+            # received the stop signal `""`
             if not raw_frames:
                 break
 
