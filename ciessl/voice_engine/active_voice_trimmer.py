@@ -1,6 +1,8 @@
 import threading
 import Queue
 
+import numpy as np
+
 from vad import VAD
 
 class ActiveVoiceTrimmer(object):
@@ -58,7 +60,9 @@ class ActiveVoiceTrimmer(object):
             if not chunks:
                 break
 
-            yield chunks
+            frames = np.append(chunks[0], chunks[1:])
+
+            yield frames
 
 
     def __voice_detect(self):
@@ -108,7 +112,7 @@ def test_avt():
         if is_quit.is_set():
             break
 
-        print( "active voice length = %d" % len(active_frames) )
+        print( "active voice size", active_frames.shape )
     
     avt.stop()
     print("Stop listening")
