@@ -18,11 +18,6 @@ class VAD(object):
 
         return active
 
-            
-
-if __name__ == '__main__':
-    test_vad()
-
 
 def test_vad():
     import sys
@@ -67,3 +62,7 @@ def test_vad():
 
     mic.stop()
     print("Stop recording")
+
+
+if __name__ == '__main__':
+    test_vad()

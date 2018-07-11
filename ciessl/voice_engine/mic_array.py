@@ -102,6 +102,10 @@ class MicArray(object):
         return self.sample_rate_
 
 
+    def is_active(self):
+        return self.stream_.is_active()
+
+
     def __callback(self, in_data, frame_count, time_info, status):
         self.queue_cond_.acquire()
 
