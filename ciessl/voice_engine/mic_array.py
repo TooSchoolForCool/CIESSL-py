@@ -9,10 +9,23 @@ import numpy as np
 # Define some global variables here
 MAX_QUEUE_SIZE = 32
 
+PYAUDIO_FORMAT = {
+    "int8" : pyaudio.paInt8,
+    "int16" : pyaudio.paInt16,
+    "int32" : pyaudio.paInt32,
+    "float32" : pyaudio.paFloat32
+}
+
+NUMPY_FORMAT = {
+    "int8" : np.int8,
+    "int16" : np.int16,
+    "int32" : np.int32,
+    "float32" : np.float32
+}
 
 class MicArray(object):
     
-    def __init__(self, sample_rate=44100, n_channels=16, chunk_size=4096):
+    def __init__(self, sample_rate=44100, n_channels=16, chunk_size=4096, format_in="int16"):
         self.pyaudio_ins_ = pyaudio.PyAudio()
 
         self.queue_ = collections.deque(maxlen=MAX_QUEUE_SIZE)
@@ -23,13 +36,15 @@ class MicArray(object):
         self.n_channels_ = n_channels
         self.sample_rate_ = sample_rate
         self.chunk_size_ = chunk_size
+        self.pyaudio_format_ = PYAUDIO_FORMAT[format_in]
+        self.np_format_ = NUMPY_FORMAT[format_in]
 
         device_idx = self.__find_device_index()
         
         self.stream_ = self.pyaudio_ins_.open(
             input=True,
             start=False,
-            format=pyaudio.paInt16,
+            format=self.pyaudio_format_,
             channels=self.n_channels_,
             rate=self.sample_rate_,
             frames_per_buffer=self.chunk_size_,
@@ -67,16 +82,24 @@ class MicArray(object):
             if len(self.queue_) == 0:
                 self.queue_cond_.wait()
 
-            frames = self.queue_.popleft()
+            raw_frames = self.queue_.popleft()
 
             self.queue_cond_.release()
 
-            # Cannot acquire signal from device
-            if not frames:
+            # if chunk is empty, then stop reading from device
+            if not raw_frames:
                 break
 
-            frames = np.fromstring(frames, dtype='int16')
-            yield frames
+            formed_frame = np.fromstring(raw_frames, dtype=self.np_format_)
+            yield formed_frame
+
+
+    def get_channels(self):
+        return self.n_channels_
+
+
+    def get_sample_rate(self):
+        return self.sample_rate_
 
 
     def __callback(self, in_data, frame_count, time_info, status):
@@ -110,40 +133,45 @@ class MicArray(object):
             return device_idx
 
 
-def main():
+def test_mic_array():
     import signal
     import time
+
+    from utils import write2wav
 
     mic = MicArray(
         sample_rate=44100,
         n_channels=16,
-        chunk_size=4096
+        chunk_size=4096,
+        format_in="int32"
     )
 
     # handle interrupt signal
     is_quit = threading.Event()
     def signal_handler(sig, num):
         is_quit.set()
-        print("Quit Signal Received")
+        print("Exit Signal (Ctrl + C) Received")
     signal.signal(signal.SIGINT, signal_handler)
 
-    print("1st Round")
+    formed_sequence = None
+
     mic.start()
-    for chunk in mic.read_chunks():
+    print("Start recording...")
+
+    for formed_frames in mic.read_chunks():
         if is_quit.is_set():
             break
-        print(len(chunk))
-    mic.stop()
 
-    print("2nd Round")
-    is_quit.clear()
-    mic.start()
-    for chunk in mic.read_chunks():
-        if is_quit.is_set():
-            break
-        print(len(chunk))
-    mic.stop()
+        if formed_sequence is None:
+            formed_sequence = formed_frames
+        else:
+            formed_sequence = np.append(formed_sequence, formed_frames)
 
+    mic.stop()
+    print("Stop recording")
+
+    write2wav(formed_sequence, n_channels=mic.get_channels(), rate=mic.get_sample_rate())
+    
 
 if __name__ == '__main__':
-    main()
+    test_mic_array()
