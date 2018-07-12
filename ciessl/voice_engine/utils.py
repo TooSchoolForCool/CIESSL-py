@@ -1,5 +1,7 @@
 import numpy as np
+import samplerate
 from scipy.io import wavfile
+
 
 def write2wav(frames, n_channels, rate, output=None):
     frames_per_channel = len(frames) / n_channels
@@ -11,3 +13,6 @@ def write2wav(frames, n_channels, rate, output=None):
 
     wavfile.write(output, rate, frames)
     print("[INFO] wave file is stored at: %s" % output)
+
+
+def resample()
