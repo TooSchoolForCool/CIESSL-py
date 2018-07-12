@@ -84,9 +84,10 @@ class WaveSource(AudioSource):
 
 def test_wav_file():
     import os
-
+    
     current_file_path = os.path.dirname(__file__)
-    WAV_FILE_DIR = current_file_path + "/../../assets/ch8-raw.wav"
+    wav_file_path = "../../assets/ch8-raw.wav"
+    WAV_FILE_DIR = wav_file_path if not current_file_path else current_file_path + "/" + wav_file_path
     
     ws = WaveSource(
         file_dir=WAV_FILE_DIR,
@@ -101,6 +102,10 @@ def test_wav_file():
         print("resampled frame: ", resampled_frames.shape)
         # print(resampled_frames[:10, :])
     ws.stop()
+
+    print("sample rate in: %r" % ws.get_sample_rate_in())
+    print("channels: %r" % ws.get_channels())
+    print("data_tpye: %r" % ws.get_dtype())
 
 
 if __name__ == '__main__':
