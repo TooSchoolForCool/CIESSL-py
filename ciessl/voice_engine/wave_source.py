@@ -56,7 +56,10 @@ class WaveSource(AudioSource):
 
             self.fp_ += self.chunk_size_
 
-            resampled_frames = self.__resample(raw_frames)
+            if self.sample_rate_in_ == self.sample_rate_out_:
+                resampled_frames = raw_frames
+            else:
+                resampled_frames = self.__resample(raw_frames)
 
             yield raw_frames, resampled_frames
 

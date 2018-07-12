@@ -6,7 +6,7 @@ import pyaudio
 import numpy as np
 
 from audio_source import AudioSource
-from utils import resample
+import samplerate as sr
 
 
 # Define some global variables here
@@ -52,6 +52,9 @@ class MicArray(AudioSource):
 
         device_idx = self.__find_device_index()
         
+        self.resampler_ = sr.Resampler(converter_type='linear', channels=self.n_channels_)
+        self.ratio_ = 1.0 * self.sample_rate_out_ / self.sample_rate_in_
+
         self.stream_ = self.pyaudio_ins_.open(
             input=True,
             start=False,
@@ -80,6 +83,7 @@ class MicArray(AudioSource):
 
         self.quit_event_.set()
         self.stream_.stop_stream()
+        self.resampler_.reset()
 
         # let read_chunks out of blocking when 
         # there is no input into queue any more
@@ -95,13 +99,11 @@ class MicArray(AudioSource):
 
         self.quit_event_.clear()
         while not self.quit_event_.is_set():
+            # read next chunk
             self.queue_cond_.acquire()
-
             if len(self.queue_) == 0:
                 self.queue_cond_.wait()
-
             raw_frames = self.queue_.popleft()
-
             self.queue_cond_.release()
 
             # received the stop signal `""`
@@ -111,8 +113,10 @@ class MicArray(AudioSource):
             raw_frames = np.fromstring(raw_frames, dtype=self.np_format_)
             raw_frames = np.reshape(raw_frames, (self.chunk_size_, self.n_channels_))
 
-            resampled_frames = resample(raw_frames, self.sample_rate_in_, 
-                self.sample_rate_out_, self.n_channels_, dtype=self.np_format_)
+            if self.sample_rate_in_ == self.sample_rate_out_:
+                resampled_frames = raw_frames
+            else:
+                resampled_frames = self.__resample(raw_frames)
 
             yield raw_frames, resampled_frames
 
@@ -144,6 +148,11 @@ class MicArray(AudioSource):
         # since we do NOT want to have any output, set the 
         # 1st return item to `None`
         return None, pyaudio.paContinue
+
+
+    def __resample(self, raw_frames):
+        resampled_frames = self.resampler_.process(raw_frames, self.ratio_).astype(self.np_format_)
+        return resampled_frames
 
 
     def __find_device_index(self):
