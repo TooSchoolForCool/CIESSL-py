@@ -8,6 +8,10 @@ with open("README.md", "r") as fh:
 
 requirements = [
     # 'pyaudio' avoid travis-ci build error
+    'webrtcvad'
+    'scipy'
+    'numpy'
+    'samplerate'
 ]
 
 setup_requirements = [
