@@ -9,7 +9,8 @@ from ciessl.voice_engine.utils import write2wav
 
 def test_mic_array():
     mic = MicArray(
-        sample_rate=32000,
+        sample_rate_in=44100,
+        sample_rate_out=44100,
         n_channels=16,
         chunk_size=4096,
         format_in="int16"
@@ -27,20 +28,20 @@ def test_mic_array():
     mic.start()
     print("Start recording...")
 
-    for formed_frames in mic.read_chunks():
+    for raw_frames, _ in mic.read_chunks():
         if is_quit.is_set():
             break
 
         if formed_sequence is None:
-            formed_sequence = formed_frames
+            formed_sequence = raw_frames
         else:
-            formed_sequence = np.append(formed_sequence, formed_frames)
+            formed_sequence = np.append(formed_sequence, raw_frames, axis=0)
 
     mic.stop()
     print("Stop recording")
 
     write2wav(formed_sequence, n_channels=mic.get_channels(), 
-    	rate=mic.get_sample_rate(), output="16ch_48kHz_int16.wav")
+    	rate=mic.get_sample_rate_in(), output="16ch_44kHz_int16.wav")
     
 
 if __name__ == '__main__':

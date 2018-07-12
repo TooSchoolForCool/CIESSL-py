@@ -1,12 +1,9 @@
 import numpy as np
-import samplerate
+import samplerate as sr
 from scipy.io import wavfile
 
 
 def write2wav(frames, n_channels, rate, output=None):
-    frames_per_channel = len(frames) / n_channels
-    frames = np.reshape(frames, (frames_per_channel, n_channels))
-
     #Write multi-channel .wav file with SciPy
     if output is None:
         output = "%dch_%dHz.wav" % (n_channels, rate)
@@ -15,4 +12,10 @@ def write2wav(frames, n_channels, rate, output=None):
     print("[INFO] wave file is stored at: %s" % output)
 
 
-def resample()
+def resample(raw_frames, input_rate, target_rate, n_channels, dtype, converter_type='linear'):
+    resampler = sr.Resampler(converter_type=converter_type, channels=n_channels)
+
+    ratio = 1.0 * target_rate / input_rate
+    resampled_frames = resampler.process(raw_frames, ratio).astype(dtype)
+
+    return resampled_frames

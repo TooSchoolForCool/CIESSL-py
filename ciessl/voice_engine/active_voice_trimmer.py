@@ -15,7 +15,7 @@ class ActiveVoiceTrimmer(object):
 
         self.queue_ = Queue.Queue()
 
-        self.active_chunks_ = []
+        self.active_chunks_ = None
         
 
     def start(self):
@@ -54,28 +54,30 @@ class ActiveVoiceTrimmer(object):
             raise Exception("ActiveVoiceTrimmer is not started yet")
 
         while not self.quit_event_.is_set():
-            chunks = self.queue_.get()
+            frames = self.queue_.get()
 
             # received stop signal
-            if not chunks:
+            if frames is "":
                 break
-
-            frames = np.append(chunks[0], chunks[1:])
 
             yield frames
 
 
     def __voice_detect(self):
-        for chunk in self.audio_source_.read_chunks():
+        for raw_frames, resampled_frames in self.audio_source_.read_chunks():
             if self.quit_event_.is_set():
                 break
 
-            if self.vad_.is_speech(chunk, self.audio_source_.get_sample_rate(), self.audio_source_.get_channels()):
-                self.active_chunks_.append(chunk)
+            if self.vad_.is_speech(resampled_frames, self.audio_source_.get_sample_rate_out(), 
+                self.audio_source_.get_channels()):
+                if self.active_chunks_ is None:
+                    self.active_chunks_ = raw_frames
+                else:
+                    self.active_chunks_ = np.append(self.active_chunks_, raw_frames, axis=0)
             else:
-                if self.active_chunks_:
+                if self.active_chunks_ is not None:
                     self.queue_.put(self.active_chunks_)
-                    self.active_chunks_ = []
+                    self.active_chunks_ = None
 
 
 def test_avt():
@@ -85,12 +87,14 @@ def test_avt():
     from utils import write2wav
     from mic_array import MicArray
 
-    sample_rate = 48000
+    sample_rate = 44100
+    sample_rate_out = 32000
     vad_time_interval = 10
     chunk_size = sample_rate * vad_time_interval / 1000
 
     mic = MicArray(
-        sample_rate=sample_rate,
+        sample_rate_in=sample_rate,
+        sample_rate_out=sample_rate_out,
         n_channels=16,
         chunk_size=chunk_size,
         format_in="int16"

@@ -16,7 +16,11 @@ class AudioSource(object):
         pass
 
     @abstractmethod
-    def get_sample_rate():
+    def get_sample_rate_in():
+        pass
+
+    @abstractmethod
+    def get_sample_rate_out():
         pass
 
     @abstractmethod

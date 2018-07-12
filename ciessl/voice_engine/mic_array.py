@@ -6,6 +6,7 @@ import pyaudio
 import numpy as np
 
 from audio_source import AudioSource
+from utils import resample
 
 
 # Define some global variables here
@@ -27,7 +28,14 @@ NUMPY_FORMAT = {
 
 class MicArray(AudioSource):
     
-    def __init__(self, sample_rate=44100, n_channels=16, chunk_size=4096, format_in="int16"):
+    def __init__(
+        self, 
+        sample_rate_in=44100,
+        sample_rate_out=32000,
+        n_channels=16, 
+        chunk_size=4096, 
+        format_in="int16"
+    ):
         self.pyaudio_ins_ = pyaudio.PyAudio()
 
         self.queue_ = collections.deque(maxlen=MAX_QUEUE_SIZE)
@@ -36,7 +44,8 @@ class MicArray(AudioSource):
         self.queue_cond_ = threading.Condition()
         
         self.n_channels_ = n_channels
-        self.sample_rate_ = sample_rate
+        self.sample_rate_in_ = sample_rate_in
+        self.sample_rate_out_ = sample_rate_out
         self.chunk_size_ = chunk_size
         self.pyaudio_format_ = PYAUDIO_FORMAT[format_in]
         self.np_format_ = NUMPY_FORMAT[format_in]
@@ -48,7 +57,7 @@ class MicArray(AudioSource):
             start=False,
             format=self.pyaudio_format_,
             channels=self.n_channels_,
-            rate=self.sample_rate_,
+            rate=self.sample_rate_in_,
             frames_per_buffer=self.chunk_size_,
             stream_callback=self.__callback,
             input_device_index=device_idx,
@@ -99,16 +108,25 @@ class MicArray(AudioSource):
             if not raw_frames:
                 break
 
-            formed_frame = np.fromstring(raw_frames, dtype=self.np_format_)
-            yield formed_frame
+            raw_frames = np.fromstring(raw_frames, dtype=self.np_format_)
+            raw_frames = np.reshape(raw_frames, (self.chunk_size_, self.n_channels_))
+
+            resampled_frames = resample(raw_frames, self.sample_rate_in_, 
+                self.sample_rate_out_, self.n_channels_, dtype=self.np_format_)
+
+            yield raw_frames, resampled_frames
 
 
     def get_channels(self):
         return self.n_channels_
 
 
-    def get_sample_rate(self):
-        return self.sample_rate_
+    def get_sample_rate_in(self):
+        return self.sample_rate_in_
+
+
+    def get_sample_rate_out(self):
+        return self.sample_rate_out_
 
 
     def is_active(self):
@@ -153,9 +171,10 @@ def test_mic_array():
     from utils import write2wav
 
     mic = MicArray(
-        sample_rate=44100,
+        sample_rate_in=44100,
+        sample_rate_out=32000,
         n_channels=16,
-        chunk_size=4096,
+        chunk_size=441,
         format_in="int32"
     )
 
@@ -171,19 +190,19 @@ def test_mic_array():
     mic.start()
     print("Start recording...")
 
-    for formed_frames in mic.read_chunks():
+    for raw_frames, _ in mic.read_chunks():
         if is_quit.is_set():
             break
 
         if formed_sequence is None:
-            formed_sequence = formed_frames
+            formed_sequence = raw_frames
         else:
-            formed_sequence = np.append(formed_sequence, formed_frames)
+            formed_sequence = np.append(formed_sequence, raw_frames, axis=0)
 
     mic.stop()
     print("Stop recording")
-
-    write2wav(formed_sequence, n_channels=mic.get_channels(), rate=mic.get_sample_rate())
+    print(formed_sequence.shape)
+    write2wav(formed_sequence, n_channels=mic.get_channels(), rate=mic.get_sample_rate_in())
     
 
 if __name__ == '__main__':

@@ -8,12 +8,14 @@ from ciessl.voice_engine.active_voice_trimmer import ActiveVoiceTrimmer
 
 
 def save_mic_active_voice():
-    sample_rate = 48000
     vad_time_interval = 10
+    sample_rate = 44100
+    sample_rate_out = 32000
     chunk_size = sample_rate * vad_time_interval / 1000
 
     mic = MicArray(
-        sample_rate=sample_rate,
+        sample_rate_in=sample_rate,
+        sample_rate_out=sample_rate_out,
         n_channels=16,
         chunk_size=chunk_size,
         format_in="int16"
@@ -21,7 +23,7 @@ def save_mic_active_voice():
 
     voice_cnt = 0
 
-    avt = ActiveVoiceTrimmer(mode=2, audio_source=mic)
+    avt = ActiveVoiceTrimmer(mode=3, audio_source=mic)
 
     # handle interrupt signal
     is_quit = threading.Event()
@@ -38,7 +40,7 @@ def save_mic_active_voice():
             break
 
         print("active voice received")
-        write2wav(active_frames, mic.get_channels(), mic.get_sample_rate(), 
+        write2wav(active_frames, mic.get_channels(), mic.get_sample_rate_in(), 
             output="active_voice_" + str(voice_cnt) + ".wav")
         voice_cnt += 1
     

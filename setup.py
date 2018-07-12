@@ -11,7 +11,8 @@ requirements = [
     'webrtcvad',
     'scipy',
     'numpy',
-    'samplerate'
+    'samplerate',
+    'enum34'
 ]
 
 setup_requirements = [
