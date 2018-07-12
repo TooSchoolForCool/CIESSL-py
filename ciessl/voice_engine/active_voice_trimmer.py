@@ -56,7 +56,7 @@ class ActiveVoiceTrimmer(object):
         while not self.quit_event_.is_set():
             frames = self.queue_.get()
 
-            # received stop signal
+            # received 'stop' signal
             if frames is "":
                 break
 
@@ -78,6 +78,9 @@ class ActiveVoiceTrimmer(object):
                 if self.active_chunks_ is not None:
                     self.queue_.put(self.active_chunks_)
                     self.active_chunks_ = None
+
+        # when audio source stoped, then send a 'stop' signal to read_active_chunks
+        self.queue_.put("")
 
 
 def test_avt():
