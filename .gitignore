@@ -2,7 +2,7 @@
 .DS_Store
 
 # ignore all .wav file in example/
-example/*.wav
+examples/*.wav
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

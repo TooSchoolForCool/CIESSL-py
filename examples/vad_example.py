@@ -8,7 +8,7 @@ from ciessl.voice_engine.vad import VAD
 
 def test_vad():
     vad_time_interval = 10
-    sample_rate = 48000
+    sample_rate = 32000
     chunk_size = sample_rate * vad_time_interval / 1000
 
     mic = MicArray(

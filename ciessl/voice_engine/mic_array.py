@@ -5,6 +5,8 @@ import math
 import pyaudio
 import numpy as np
 
+from audio_source import AudioSource
+
 
 # Define some global variables here
 MAX_QUEUE_SIZE = 32
@@ -23,7 +25,7 @@ NUMPY_FORMAT = {
     "float32" : np.float32
 }
 
-class MicArray(object):
+class MicArray(AudioSource):
     
     def __init__(self, sample_rate=44100, n_channels=16, chunk_size=4096, format_in="int16"):
         self.pyaudio_ins_ = pyaudio.PyAudio()

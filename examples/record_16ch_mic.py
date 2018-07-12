@@ -9,7 +9,7 @@ from ciessl.voice_engine.utils import write2wav
 
 def test_mic_array():
     mic = MicArray(
-        sample_rate=48000,
+        sample_rate=32000,
         n_channels=16,
         chunk_size=4096,
         format_in="int16"
