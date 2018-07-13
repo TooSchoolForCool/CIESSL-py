@@ -4,27 +4,16 @@ import math
 
 import pyaudio
 import numpy as np
-
-from audio_source import AudioSource
 import samplerate as sr
+
+from global_var import STR2NUMPY_FORMAT, STR2PYAUDIO_FORMAT
+from audio_source import AudioSource
+from signal_process import convert_type
 
 
 # Define some global variables here
 MAX_QUEUE_SIZE = 32
 
-PYAUDIO_FORMAT = {
-    "int8" : pyaudio.paInt8,
-    "int16" : pyaudio.paInt16,
-    "int32" : pyaudio.paInt32,
-    "float32" : pyaudio.paFloat32
-}
-
-NUMPY_FORMAT = {
-    "int8" : np.int8,
-    "int16" : np.int16,
-    "int32" : np.int32,
-    "float32" : np.float32
-}
 
 class MicArray(AudioSource):
     
@@ -34,7 +23,8 @@ class MicArray(AudioSource):
         sample_rate_out=32000,
         n_channels=16, 
         chunk_size=4096, 
-        format_in="int16"
+        format_in="int16",
+        format_out=None
     ):
         self.pyaudio_ins_ = pyaudio.PyAudio()
 
@@ -47,8 +37,9 @@ class MicArray(AudioSource):
         self.sample_rate_in_ = sample_rate_in
         self.sample_rate_out_ = sample_rate_out
         self.chunk_size_ = chunk_size
-        self.pyaudio_format_ = PYAUDIO_FORMAT[format_in]
-        self.np_format_ = NUMPY_FORMAT[format_in]
+        self.pyaudio_format_ = STR2PYAUDIO_FORMAT[format_in]
+        self.np_format_ = STR2NUMPY_FORMAT[format_in]
+        self.format_out_ = self.np_format_ if format_out is None else STR2NUMPY_FORMAT[format_out]
 
         device_idx = self.__find_device_index()
         
@@ -67,6 +58,11 @@ class MicArray(AudioSource):
         )
 
         print("[INFO] Microphone Array Init is done")
+
+
+    def __del__(self):
+        self.stream_.close()
+        self.pyaudio_ins_.terminate()
 
 
     def start(self):
@@ -117,6 +113,8 @@ class MicArray(AudioSource):
                 resampled_frames = raw_frames
             else:
                 resampled_frames = self.__resample(raw_frames)
+
+            resampled_frames = convert_type(resampled_frames, self.np_format_, self.format_out_)
 
             yield raw_frames, resampled_frames
 
@@ -184,7 +182,8 @@ def test_mic_array():
         sample_rate_out=32000,
         n_channels=16,
         chunk_size=441,
-        format_in="int32"
+        format_in="float32",
+        format_out="int16"
     )
 
     # handle interrupt signal

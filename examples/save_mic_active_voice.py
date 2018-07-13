@@ -18,7 +18,8 @@ def save_mic_active_voice():
         sample_rate_out=sample_rate_out,
         n_channels=16,
         chunk_size=chunk_size,
-        format_in="int16"
+        format_in="float32",
+        format_out="int16"
     )
 
     voice_cnt = 0

@@ -9,13 +9,15 @@ from ciessl.voice_engine.active_voice_trimmer import ActiveVoiceTrimmer
 
 def save_mic_active_voice():
     current_file_path = os.path.dirname(__file__)
-    wav_file_path = "../assets/6_claps_int16.wav"
+    # wav_file_path = "../assets/6_claps_int16.wav"
+    wav_file_path = "../assets/ch8-raw.wav"
     WAV_FILE_DIR = wav_file_path if not current_file_path else current_file_path + "/" + wav_file_path
 
     ws = WaveSource(
         file_dir=WAV_FILE_DIR,
         sample_rate_out=32000,
-        chunk_time_interval=10
+        chunk_time_interval=10,
+        format_out="int16"
     )
 
     voice_cnt = 0

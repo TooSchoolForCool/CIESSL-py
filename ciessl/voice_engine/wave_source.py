@@ -6,13 +6,16 @@ import numpy as np
 import samplerate as sr
 
 from audio_source import AudioSource
+from global_var import STR2NUMPY_FORMAT
+from signal_process import convert_type
 
 
 class WaveSource(AudioSource):
 
-    def __init__(self, file_dir, sample_rate_out=None, chunk_time_interval=10):
+    def __init__(self, file_dir, format_out=None, sample_rate_out=None, chunk_time_interval=10):
         self.sample_rate_in_, self.data_ = wf.read(file_dir)
-        self.dtype_ = self.data_.dtype
+        self.format_in_ = self.data_.dtype
+        self.format_out_ = self.format_in_ if format_out is None else STR2NUMPY_FORMAT[format_out]
 
         try:
             self.n_channels_ = self.data_.shape[1]
@@ -51,7 +54,7 @@ class WaveSource(AudioSource):
                 raw_frames = self.data_[self.fp_:, :]
 
                 add_on_size = self.fp_ + self.chunk_size_ - self.data_.shape[0]
-                add_on = np.zeros((add_on_size, self.n_channels_), dtype=self.dtype_)
+                add_on = np.zeros((add_on_size, self.n_channels_), dtype=self.format_in_)
                 raw_frames = np.append(raw_frames, add_on, axis=0)
 
             self.fp_ += self.chunk_size_
@@ -60,6 +63,8 @@ class WaveSource(AudioSource):
                 resampled_frames = raw_frames
             else:
                 resampled_frames = self.__resample(raw_frames)
+
+            resampled_frames = convert_type(resampled_frames, self.format_in_, self.format_out_)
 
             yield raw_frames, resampled_frames
 
@@ -77,11 +82,11 @@ class WaveSource(AudioSource):
 
 
     def get_dtype(self):
-        return self.dtype_
+        return self.format_in_
 
 
     def __resample(self, raw_frames):
-        resampled_frames = self.resampler_.process(raw_frames, self.ratio_).astype(self.dtype_)
+        resampled_frames = self.resampler_.process(raw_frames, self.ratio_).astype(self.format_in_)
         return resampled_frames
 
 
@@ -95,15 +100,16 @@ def test_wav_file():
     ws = WaveSource(
         file_dir=WAV_FILE_DIR,
         sample_rate_out=32000,
-        chunk_time_interval=10
+        chunk_time_interval=10,
+        format_out="int16"
     )
 
     ws.start()
     for raw_frames, resampled_frames in ws.read_chunks():
         print("raw frame: ", raw_frames.shape)
-        # print(raw_frames[:10, :])
+        print(raw_frames[:10, 0])
         print("resampled frame: ", resampled_frames.shape)
-        # print(resampled_frames[:10, :])
+        print(resampled_frames[:10, 0])
     ws.stop()
 
     print("sample rate in: %r" % ws.get_sample_rate_in())
