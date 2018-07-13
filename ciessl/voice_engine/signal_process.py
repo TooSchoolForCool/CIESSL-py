@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import signal as sig
 
 import global_var
 
@@ -29,7 +30,14 @@ def convert_type(frames, format_in, format_out):
         raise Exception("Do NOT support converting from {} to {}".format(format_in, format_out))
 
 
-def test():
+def stft(frames, sample_rate, segment_size=None, overlap_size=None, mode="magnitude"):
+    frequency, times, spec = sig.spectrogram(frames, sample_rate, nperseg=segment_size,
+        noverlap=overlap_size, mode=mode)
+
+    return frequency, times, spec
+
+
+def test_converter():
     A = np.array([[-1.0, 1.0], [0.5, -0.5], [0, 0]])
     print(A)
     A = convert_type(A, "float32", "int16")
@@ -37,4 +45,4 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    test_converter()
