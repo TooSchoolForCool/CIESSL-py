@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
     README = fh.read()
 
 requirements = [
-    # 'pyaudio', avoid travis-ci build error
+    'pyaudio'
     'webrtcvad',
     'scipy',
     'numpy',

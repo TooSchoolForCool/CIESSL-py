@@ -7,7 +7,7 @@ from ciessl.voice_engine.vad import VAD
 
 
 def test_vad():
-    vad_time_interval = 10
+    vad_time_interval = 20
     sample_rate = 44100
     sample_rate_out = 32000
     chunk_size = sample_rate * vad_time_interval / 1000

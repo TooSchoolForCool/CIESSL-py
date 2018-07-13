@@ -16,7 +16,7 @@ def save_mic_active_voice():
     ws = WaveSource(
         file_dir=WAV_FILE_DIR,
         sample_rate_out=32000,
-        chunk_time_interval=10,
+        chunk_time_interval=20,
         format_out="int16"
     )
 

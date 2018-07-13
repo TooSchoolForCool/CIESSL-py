@@ -11,6 +11,7 @@ before_install:
 - sudo apt-get update
 - sudo apt-get install python-pyaudio
 - sudo apt-get install libsamplerate0
+- sudo apt-get install portaudio19-dev
 
 install:
 - python setup.py bdist_wheel
