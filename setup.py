@@ -7,13 +7,13 @@ with open("README.md", "r") as fh:
     README = fh.read()
 
 requirements = [
-    'pyaudio'
+    'pyaudio',
     'webrtcvad',
     'scipy',
     'numpy',
     'samplerate',
     'enum34',
-    'matplotlib'
+    'matplotlib',
 ]
 
 setup_requirements = [
