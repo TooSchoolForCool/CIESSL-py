@@ -7,14 +7,12 @@ python:
 
 before_install:
 - sudo apt-get update
-- sudo pip install -U pip
-- sudo pip install -r requirements.txt
 - sudo apt-get install python-pyaudio
-
+- sudo apt-get install libsamplerate0
 
 install:
 - python setup.py bdist_wheel
-- sudo pip install ./dist/*.whl
+- pip install ./dist/*.whl
 
 script:
 - pytest
