@@ -12,7 +12,8 @@ requirements = [
     'scipy',
     'numpy',
     'samplerate',
-    'enum34'
+    'enum34',
+    'matplotlib'
 ]
 
 setup_requirements = [
