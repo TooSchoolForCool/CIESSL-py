@@ -1,10 +1,10 @@
 import signal
 import threading
 
-from ciessl.voice_engine.utils import write2wav
-from ciessl.voice_engine.mic_array import MicArray
-from ciessl.voice_engine.vad import VAD
-from ciessl.voice_engine.active_voice_trimmer import ActiveVoiceTrimmer
+from voice_engine.utils import write2wav
+from voice_engine.mic_array import MicArray
+from voice_engine.vad import VAD
+from voice_engine.active_voice_trimmer import ActiveVoiceTrimmer
 
 
 def save_mic_active_voice():

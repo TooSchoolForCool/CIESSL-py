@@ -4,8 +4,8 @@ import threading
 
 import numpy as np
 
-from ciessl.voice_engine.mic_array import MicArray
-from ciessl.voice_engine.utils import write2wav
+from voice_engine.mic_array import MicArray
+from voice_engine.utils import write2wav
 
 def test_mic_array():
     mic = MicArray(

@@ -2,8 +2,8 @@ import sys
 import threading
 import signal
 
-from ciessl.voice_engine.mic_array import MicArray
-from ciessl.voice_engine.vad import VAD
+from voice_engine.mic_array import MicArray
+from voice_engine.vad import VAD
 
 
 def test_vad():

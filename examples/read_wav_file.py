@@ -1,6 +1,6 @@
 import os
 
-from ciessl.voice_engine.wave_source import WaveSource
+from voice_engine.wave_source import WaveSource
 
 
 def read_wav_file():

@@ -25,8 +25,8 @@ test_requirements = [
 ]
 
 setup(
-    name="ciessl",
-    version="0.0.1",
+    name="ciessl_py_pkgs",
+    version="1.0.0",
 
     author="Zeyu Zhang",
     author_email="zeyuz@outlook.com",
@@ -36,7 +36,7 @@ setup(
     
     url="https://github.com/TooSchoolForCool/CIESSL-py",
     
-    packages=find_packages(),
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     include_package_data=True,
 
     license="Apache-2.0",

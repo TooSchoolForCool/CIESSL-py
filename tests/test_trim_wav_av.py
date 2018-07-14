@@ -2,9 +2,9 @@ import os
 import signal
 import threading
 
-from ciessl.voice_engine.utils import write2wav
-from ciessl.voice_engine.wave_source import WaveSource
-from ciessl.voice_engine.active_voice_trimmer import ActiveVoiceTrimmer
+from voice_engine.utils import write2wav
+from voice_engine.wave_source import WaveSource
+from voice_engine.active_voice_trimmer import ActiveVoiceTrimmer
 
 
 def test_save_wav_active_voice():

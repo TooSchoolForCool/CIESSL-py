@@ -5,10 +5,10 @@ import threading
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ciessl.voice_engine.utils import write2wav
-from ciessl.voice_engine.wave_source import WaveSource
-from ciessl.voice_engine.active_voice_trimmer import ActiveVoiceTrimmer
-from ciessl.voice_engine.signal_process import stft
+from voice_engine.utils import write2wav
+from voice_engine.wave_source import WaveSource
+from voice_engine.active_voice_trimmer import ActiveVoiceTrimmer
+from voice_engine.signal_process import stft
 
 def save_mic_active_voice():
     current_file_path = os.path.dirname(__file__)

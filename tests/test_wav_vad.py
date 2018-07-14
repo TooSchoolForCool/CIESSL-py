@@ -3,8 +3,8 @@ import sys
 import threading
 import signal
 
-from ciessl.voice_engine.vad import VAD
-from ciessl.voice_engine.wave_source import WaveSource
+from voice_engine.vad import VAD
+from voice_engine.wave_source import WaveSource
 
 
 def test_wav_vad():
