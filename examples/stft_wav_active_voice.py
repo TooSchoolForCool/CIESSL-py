@@ -54,7 +54,7 @@ def save_mic_active_voice():
         plt.title("STFT Magnitude")
         plt.show()
 
-        Sxx = 10 * np.log10(Sxx)
+        Sxx = np.log10(Sxx)
         plt.pcolormesh(t, f, Sxx)
         plt.ylabel('Frequency [Hz]')
         plt.xlabel('Time [sec]')
