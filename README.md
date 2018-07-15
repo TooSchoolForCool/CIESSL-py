@@ -27,9 +27,12 @@ To support our sound source localization solution, several python packages have 
 
 ### 2.1 Voice Engine
 
-[voice_engine](voice_engine) is a python package that handling audio sources processing. It includes acquiring data from a microphone array, reading/writing data from/to a .wav file, resampling signal data, Voice Activity Detection (VAD) and Short Time Fourier Transform (STFT).
+[voice_engine](voice_engine) is a python package that handles audio sources processing. It includes acquiring data from a microphone array, reading/writing data from/to a .wav file, resampling signal data, Voice Activity Detection (VAD) and Short Time Fourier Transform (STFT).
 
 ## 3. CIESSL
 
 ### 3.1 Voice Signal Processing
 
+While reading in voice signal data, Voice Activity Detection (VAD) is performed. We then trim out the active voice segment, and a log-scale Short Time Fourier Transform (STFT) is applied to the active voice segment. Finally, we can convert a 1 dimensional voice signal into  2 dimensional spectrogram in Time Frequency (TF) domain.
+
+![voice_process_demo](demo/voice_process_demo.png)
