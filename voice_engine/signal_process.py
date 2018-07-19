@@ -30,11 +30,15 @@ def convert_type(frames, format_in, format_out):
         raise Exception("Do NOT support converting from {} to {}".format(format_in, format_out))
 
 
-def stft(frames, sample_rate, segment_size=None, overlap_size=None, mode="magnitude"):
-    frequency, times, spec = sig.spectrogram(frames, sample_rate, nperseg=segment_size,
-        noverlap=overlap_size, mode=mode)
+def stft(frames, sample_rate, window=('tukey', .25), segment_size=None, overlap_size=None):
+    freqs, time, spec = sig.stft(frames, sample_rate, window, segment_size, overlap_size)
 
-    return frequency, times, spec
+    # amplitude component of STFT
+    amp = np.abs(spec)
+    # phase component of STFT
+    phase = np.angle(spec)
+
+    return freqs, time, amp, phase
 
 
 def test_converter():

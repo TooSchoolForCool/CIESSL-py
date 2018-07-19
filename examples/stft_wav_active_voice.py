@@ -44,21 +44,23 @@ def save_mic_active_voice():
         print("active voice {} received".format(voice_cnt))
 
 
-        f, t, Sxx = stft(active_frames[:, 0], ws.get_sample_rate_in(), overlap_size=250)
+        f, t, amp, phase = stft(active_frames[:, 0], ws.get_sample_rate_in(), 
+            segment_size=256, overlap_size=250)
 
-        print("{} --> {}".format(active_frames[:, 0].shape, Sxx.shape))
+        print("{} --> {}, {}".format(active_frames[:, 0].shape, amp.shape, phase.shape))
 
-        plt.pcolormesh(t, f, Sxx)
-        plt.ylabel('Frequency [Hz]')
-        plt.xlabel('Time [sec]')
-        plt.title("STFT Magnitude")
-        plt.show()
-
-        Sxx = np.log10(Sxx)
-        plt.pcolormesh(t, f, Sxx)
+        # log-scale
+        amp = np.log10(amp)
+        plt.pcolormesh(t, f, amp)
         plt.ylabel('Frequency [Hz]')
         plt.xlabel('Time [sec]')
         plt.title("STFT dB")
+        plt.show()
+
+        plt.pcolormesh(t, f, phase)
+        plt.ylabel('Frequency [Hz]')
+        plt.xlabel('Time [sec]')
+        plt.title("STFT Phase")
         plt.show()
         
         voice_cnt += 1
