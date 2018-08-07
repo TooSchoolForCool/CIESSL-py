@@ -12,6 +12,7 @@ Before installing this package, several system dependencies need to be installed
 
 ```bash
 sudo apt-get install python-pyaudio libsamplerate0 portaudio19-dev
+sudo pip install wheel
 ```
 
 Then use following command to install this package

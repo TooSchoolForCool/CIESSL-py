@@ -72,8 +72,21 @@ if __name__=="__main__":
     X = (X - mean) / std
     
     clf = RankSVM(max_iter=100, alpha=0.01, loss='hinge')
-    clf.fit(X[:500], y[:500])
-    clf.partial_fit(X[500:],y[500:])
+    clf.fit(X[:2], y[:2])
+
+    pred = clf.predict(X)
+
+    print "ACC: %.4f" % metrics.accuracy_score(y, pred)
+    print("AUC: %.4f" % metrics.roc_auc_score(y, pred))
+    print("Precision: %.4lf" % metrics.average_precision_score(y, pred))
+    print("Recall: %.4lf" % metrics.recall_score(y, pred))
+    print "CONFUSION MATRIX: "
+    print metrics.confusion_matrix(y, pred)
+    print "Kendall Tau: %.4f" % kendalltau(clf,X,y)
+    print 80*'='
+
+    for i in [x * 10 for x in range(1, (n_samples_1 + n_samples_2) / 10)]:
+        clf.partial_fit(X[i:i + 10], y[i:i + 10])
 
     pred = clf.predict(X)
 

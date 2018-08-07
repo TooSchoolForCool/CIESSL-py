@@ -14,6 +14,7 @@ requirements = [
     'samplerate',
     'enum34',
     'matplotlib',
+    'scikit-learn',
 ]
 
 setup_requirements = [
