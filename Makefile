@@ -1,4 +1,4 @@
-.PHONY: install remove dev
+.PHONY: install remove dev voice_preprocess
 
 install:
 	python setup.py bdist_wheel
@@ -10,3 +10,6 @@ remove:
 
 dev:
 	sudo pip2 install -e .
+
+voice_preprocess:
+	python ciessl_app/voice_preprocess.py --data_in="data/sample" --data_out="data/active_voice"

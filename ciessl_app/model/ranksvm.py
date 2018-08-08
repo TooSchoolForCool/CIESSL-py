@@ -42,6 +42,9 @@ class RankSVM(SGDClassifier):
         Parameters
         ----------
         X : array, shape (n_samples, n_features)
+
+        Returns:
+        pred ( np.ndarray, shape (n_samples,) ): prediction result
         """
         pred = super(RankSVM, self).predict(X)
         return pred
