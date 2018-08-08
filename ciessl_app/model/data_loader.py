@@ -27,13 +27,14 @@ class DataLoader(object):
             self.voice_file_dirs_.append(os.path.join(voice_data_dir, file))
 
 
-    def voice_data_iterator(self, n_samples=None, seed=0):
+    def voice_data_iterator(self, n_samples=None, seed=0, shuffle=True):
         """
         Yield voice data one by one interatively
 
         Args:
             n_samples (int): number of total samples to be yield
             seed (int): random seed for the numpy shuffling
+            shuffle (bool): shuffle data or not
 
         Yields:
             data (dictionary):
@@ -45,9 +46,11 @@ class DataLoader(object):
                 data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
         """
-        rs = np.random.RandomState(seed)
         idx = np.arange( len(self.voice_file_dirs_) )
-        rs.shuffle(idx)
+
+        if shuffle:
+            rs = np.random.RandomState(seed)
+            rs.shuffle(idx)
 
         n_samples = len(self.voice_file_dirs_) if n_samples is None else n_samples
 

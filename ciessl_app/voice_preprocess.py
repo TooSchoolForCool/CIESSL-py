@@ -29,6 +29,20 @@ def arg_parser():
         required=True,
         help="Output data directory"
     )
+    parser.add_argument(
+        "--chunk_interval",
+        dest="chunk_interval",
+        type=int,
+        default=20,
+        help="Chunk time interval for VAD"
+    )
+    parser.add_argument(
+        "--mode",
+        dest="mode",
+        type=int,
+        default=3,
+        help="VAD detection mode [1 - 3]"
+    )
     
     args = parser.parse_args()
 
@@ -90,7 +104,7 @@ def main():
     # trim active voice in each file
     for voice_file in voice_file_dirs:
         trim_active_voice(voice_file, args.data_out, sample_rate_out=48000, 
-            chunk_time_interval=20, format_out="int16", mode=3)
+            chunk_time_interval=args.chunk_interval, format_out="int16", mode=args.mode)
 
 
 if __name__ == '__main__':

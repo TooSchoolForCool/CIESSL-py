@@ -1,5 +1,6 @@
 import numpy as np
 import samplerate as sr
+import matplotlib.pyplot as plt
 from scipy.io import wavfile
 
 
@@ -19,3 +20,12 @@ def resample(raw_frames, input_rate, target_rate, n_channels, dtype, converter_t
     resampled_frames = resampler.process(raw_frames, ratio).astype(dtype)
 
     return resampled_frames
+
+
+def view_spectrum(time, freq, spec, title):
+    plt.pcolormesh(time, freq, spec)
+    plt.ylabel('Frequency [Hz]')
+    plt.xlabel('Time [sec]')
+    plt.title(title)
+
+    plt.show()
