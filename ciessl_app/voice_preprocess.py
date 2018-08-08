@@ -53,12 +53,16 @@ def trim_active_voice(voice_file, outpath, sample_rate_out=32000,
 
     voice_cnt = 0
     file_name = voice_file.split('.')[0].split('/')[-1]
+    sample_rate = ws.get_sample_rate_in()
 
     avt = ActiveVoiceTrimmer(mode=mode, audio_source=ws)
     avt.start()
 
+    print("%s sample rate in: %d" % (file_name, sample_rate))
+
     for active_frames in avt.read_active_chunks():
-        output_path = outpath + '/' + file_name + "_sample" + str(voice_cnt) + ".pickle"
+        output_path = outpath + '/' + str(sample_rate) + '-' + file_name \
+            + '-' + str(voice_cnt) + ".pickle"
         active_frames.dump(output_path)
         # write2wav(active_frames, ws.get_channels(), ws.get_sample_rate_in(), output=output_path)
 
@@ -75,14 +79,17 @@ def main():
     voice_dataset = args.data_in
     voice_file_dirs = []
     
+    # check output directory if exists
     if not os.path.exists(args.data_out):
         os.makedirs(args.data_out)
 
+    # acquire all input data files
     for file in os.listdir(voice_dataset):
         voice_file_dirs.append(os.path.join(voice_dataset, file))
 
+    # trim active voice in each file
     for voice_file in voice_file_dirs:
-        trim_active_voice(voice_file, args.data_out, sample_rate_out=32000, 
+        trim_active_voice(voice_file, args.data_out, sample_rate_out=48000, 
             chunk_time_interval=20, format_out="int16", mode=3)
 
 

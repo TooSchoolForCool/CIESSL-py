@@ -6,6 +6,7 @@ data/multi_ch_raw_voice
 
 # MacOS system file
 .DS_Store
+.Trash-1000/
 
 # ignore all .wav file in example/
 examples/*.wav
