@@ -27,18 +27,29 @@ class DataLoader(object):
             self.voice_file_dirs_.append(os.path.join(voice_data_dir, file))
 
 
-    def load_data(self, n_samples, )
-        rs = np.random.RandomState(0)
+    def voice_data_iterator(self, n_samples=None, seed=0):
+        rs = np.random.RandomState(seed)
+        idx = np.arange( len(self.voice_file_dirs_) )
+        rs.shuffle(idx)
 
+        n_samples = len(self.voice_file_dirs_) if n_samples is None else n_samples
+
+        for i in idx[:n_samples]:
+            voice_frames = np.load(self.voice_file_dirs_[i])
+
+            yield voice_frames
 
 
 def test():
-    voice_data_dir = "../../data/sample"
+    voice_data_dir = "../../data/active_voice"
     map_data_dir = "../../data/map"
 
     data_loader = DataLoader(voice_data_dir, map_data_dir)
-
-
+    
+    cnt = 0
+    for frame in data_loader.voice_data_iterator(n_samples=100, seed=0):
+        print("frame #%d: %r" % (cnt, frame.shape))
+        cnt += 1
 
 
 if __name__ == '__main__':

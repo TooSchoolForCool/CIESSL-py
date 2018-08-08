@@ -1,6 +1,8 @@
 # ignore all training & testing dataset
 data/active_voice
 data/map
+data/raw_voice
+data/multi_ch_raw_voice
 
 # MacOS system file
 .DS_Store
