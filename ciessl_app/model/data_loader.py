@@ -63,6 +63,28 @@ class DataLoader(object):
         cv2.imwrite(output_path, img)
 
 
+    def load_map_info(self):
+        """
+        Load segmented map
+
+        Returns:
+            map_data (dictionary):
+                map_data["data"] ( np.ndarray (height, width) ): 2D room occupancy grid map,
+                    each item is an integer in range(0, N). 0 represents wall, and 1 ~ N 
+                    represents room index
+                map_data["n_room"] (int): number of rooms
+                map_data["center"] ( list of 2-item tuple (x, y) ): each 2-item tuple
+                    represents a center of a room
+        """
+        map_data = {}
+
+        map_data["data"] = self.segmented_map_
+        map_data["n_room"] = self.n_rooms_
+        map_data["center"] = self.room_centers_
+
+        return map_data
+
+
     def voice_data_iterator(self, n_samples=None, seed=0, shuffle=True):
         """
         Yield voice data one by one interatively
@@ -142,11 +164,11 @@ def test():
 
     data_loader = DataLoader(voice_data_dir, map_data_dir)
     data_loader.save_segmented_map()
-    
-    # cnt = 0
-    # for data in data_loader.voice_data_iterator(n_samples=100, seed=0):
-    #     print("frame #%d: %r" % (cnt, data["frames"].shape))
-    #     cnt += 1
+
+    cnt = 0
+    for data in data_loader.voice_data_iterator(n_samples=100, seed=0):
+        print("frame #%d: %r" % (cnt, data["frames"].shape))
+        cnt += 1
 
 
 if __name__ == '__main__':
