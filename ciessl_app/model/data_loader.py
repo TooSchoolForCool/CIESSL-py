@@ -1,8 +1,10 @@
 import random
-import numpy as np
 import os
 import sys
+import json
 
+import numpy as np
+import cv2
 
 class DataLoader(object):
     """
@@ -19,12 +21,46 @@ class DataLoader(object):
             map_data_dir (string): a specific file path to a .json file
                 which stores the map information
         """
-        self.map_file_dir_ = map_data_dir
-
         # load all files' directories in voice_data_dir
         self.voice_file_dirs_ = []
         for file in os.listdir(voice_data_dir):
             self.voice_file_dirs_.append(os.path.join(voice_data_dir, file))
+
+        # parse map data
+        json_file=open(map_data_dir).read()
+        data = json.loads(json_file)
+
+        self.n_rooms_ = data["n_rooms"]
+        self.room_centers_ = [(c["x"], c["y"]) for c in data["room_centers"]]
+        self.segmented_map_ = np.asarray(data["map"], dtype=np.int32)
+
+
+    def save_segmented_map(self, output_path="segmented_map.png"):
+        """
+        Save segmented map image to local
+
+        Args:
+            output_path (string): output path of the image
+        """
+        img = np.zeros((self.segmented_map_.shape[0], self.segmented_map_.shape[1], 3), np.uint8)
+
+        # paint different room with random color
+        for i in range(1, self.n_rooms_ + 1):
+            blue = random.randint(0, 256)
+            green = random.randint(0, 256)
+            red = random.randint(0, 256)
+
+            # traverse each 
+            for x in range(0, self.segmented_map_.shape[0]):
+                for y in range(0, self.segmented_map_.shape[1]):
+                    if self.segmented_map_[x, y] == i:
+                        img[x, y] = (blue, green, red)
+
+        # paint estimated room center
+        for c in self.room_centers_:
+            cv2.circle(img, c, 2, (255, 0, 0), -1)
+
+        cv2.imwrite(output_path, img)
 
 
     def voice_data_iterator(self, n_samples=None, seed=0, shuffle=True):
@@ -102,14 +138,15 @@ class DataLoader(object):
 
 def test():
     voice_data_dir = "../../data/active_voice"
-    map_data_dir = "../../data/map"
+    map_data_dir = "../../data/map/bh9f_lab_map.json"
 
     data_loader = DataLoader(voice_data_dir, map_data_dir)
+    data_loader.save_segmented_map()
     
-    cnt = 0
-    for data in data_loader.voice_data_iterator(n_samples=100, seed=0):
-        print("frame #%d: %r" % (cnt, data["frames"].shape))
-        cnt += 1
+    # cnt = 0
+    # for data in data_loader.voice_data_iterator(n_samples=100, seed=0):
+    #     print("frame #%d: %r" % (cnt, data["frames"].shape))
+    #     cnt += 1
 
 
 if __name__ == '__main__':

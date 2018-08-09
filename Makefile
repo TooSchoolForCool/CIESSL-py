@@ -16,4 +16,4 @@ voice_preprocess:
 		--chunk_interval=20 --mode=3
 
 train:
-	python ciessl_app/train.py --voice="data/active_voice" --map="data/map"
+	python ciessl_app/train.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json"
