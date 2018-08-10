@@ -13,7 +13,7 @@ class DataLoader(object):
     """
     Handle data loading and parsing.
     """
-    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir):
+    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir, verbose=False):
         """
         Store voice dataset directory and map data directory
 
@@ -30,6 +30,9 @@ class DataLoader(object):
 
         self.__parse_map_data(map_data_dir)
         self.__parse_pos_tf(pos_tf_dir)
+
+        if verbose:
+            self.print_src_info()
 
 
     def save_segmented_map(self, output_path="segmented_map.png"):
@@ -81,6 +84,7 @@ class DataLoader(object):
             data (dictionary):
                 data["samplerate"] (int): samplerate of the voice data
                 data["src"] (int, int): coordinate of the sound source in the map
+                data["src_idx"] (int): sound source index
                 data["dst"] (int, int): coordinate of the microphone in the map
                 data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
@@ -104,9 +108,18 @@ class DataLoader(object):
             data["frames"] = voice_frames
             data["samplerate"] = info["samplerate"]
             data["src"] = self.src_pos_[info["src"] - 1]
+            data["src_idx"] = info["src"]
             data["dst"] = self.dst_pos_[info["dst"] - 1]
 
             yield data
+
+
+    def print_src_info(self):
+        for i, src in enumerate(self.src_pos_):
+            print("src %d: %r" % (i + 1, src))
+
+        for i, dst in enumerate(self.dst_pos_):
+            print("dst %d: %r" % (i + 1, dst))
 
 
     def __parse_voice_filename(self, file_dir):
