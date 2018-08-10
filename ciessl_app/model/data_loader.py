@@ -6,6 +6,9 @@ import json
 import numpy as np
 import cv2
 
+sys.path.append(os.path.abspath(os.path.join("..")))
+from utils import save_segmented_map
+
 class DataLoader(object):
     """
     Handle data loading and parsing.
@@ -36,37 +39,9 @@ class DataLoader(object):
         Args:
             output_path (string): output path of the image
         """
-        img = np.zeros((self.segmented_map_.shape[0], self.segmented_map_.shape[1], 3), np.uint8)
-
-        # paint different room with random color
-        for i in range(1, self.n_rooms_ + 1):
-            blue = random.randint(0, 256)
-            green = random.randint(0, 256)
-            red = random.randint(0, 256)
-
-            # traverse each 
-            for x in range(0, self.segmented_map_.shape[0]):
-                for y in range(0, self.segmented_map_.shape[1]):
-                    if self.segmented_map_[x, y] == i:
-                        img[x, y] = (blue, green, red)
-
-        # paint estimated room center
-        for c in self.room_centers_:
-            cv2.circle(img, c, 2, (255, 0, 0), -1)
-
-        # paint origin of the map
-        cv2.drawMarker(img, self.origin_, (255, 255, 255), markerType=cv2.MARKER_TILTED_CROSS,
-            markerSize=4)
-
-        # paint sound source locations
-        for src in self.src_pos_:
-            cv2.circle(img, src, 2, (0, 0, 255), -1)
-
-        # paint microphone location
-        for dst in self.dst_pos_:
-            cv2.circle(img, dst, 2, (255, 255, 255), -1)
-
-        cv2.imwrite(output_path, img)
+        save_segmented_map(map_data=self.segmented_map_, n_room=self.n_rooms_, 
+            room_centers=self.room_centers_, origin=self.origin_, src=self.src_pos_, 
+            dst=self.dst_pos_, output_path="segmented_map.png")
 
 
     def load_map_info(self):
