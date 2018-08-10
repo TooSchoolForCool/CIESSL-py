@@ -58,6 +58,8 @@ class Pipeline(object):
             flatten_sound_feature = np.append(flatten_sound_feature, phase.flatten())
 
         src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
+
+        # print("[pipeline] src: %r --> room %d" % (voice_data["src"], src_room))
         for i in range(0, map_data["n_room"]):
             src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][i], 
                 sound_fading_rate)
@@ -67,7 +69,7 @@ class Pipeline(object):
             flatten_map = product_map.flatten()
 
             feature_vec = np.append(flatten_sound_feature, flatten_map)
-            label = 1 if src_room == i else 0
+            label = 1 if src_room == i + 1 else 0
 
             X.append(feature_vec)
             y.append(label)
