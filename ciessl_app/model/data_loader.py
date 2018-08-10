@@ -10,8 +10,7 @@ class DataLoader(object):
     """
     Handle data loading and parsing.
     """
-
-    def __init__(self, voice_data_dir, map_data_dir):
+    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir):
         """
         Store voice dataset directory and map data directory
 
@@ -26,13 +25,8 @@ class DataLoader(object):
         for file in os.listdir(voice_data_dir):
             self.voice_file_dirs_.append(os.path.join(voice_data_dir, file))
 
-        # parse map data
-        json_file=open(map_data_dir).read()
-        data = json.loads(json_file)
-
-        self.n_rooms_ = data["n_rooms"]
-        self.room_centers_ = [(c["x"], c["y"]) for c in data["room_centers"]]
-        self.segmented_map_ = np.asarray(data["map"], dtype=np.int32)
+        self.__parse_map_data(map_data_dir)
+        self.__parse_pos_tf(pos_tf_dir)
 
 
     def save_segmented_map(self, output_path="segmented_map.png"):
@@ -60,6 +54,18 @@ class DataLoader(object):
         for c in self.room_centers_:
             cv2.circle(img, c, 2, (255, 0, 0), -1)
 
+        # paint origin of the map
+        cv2.drawMarker(img, self.origin_, (255, 255, 255), markerType=cv2.MARKER_TILTED_CROSS,
+            markerSize=4)
+
+        # paint sound source locations
+        for src in self.src_pos_:
+            cv2.circle(img, src, 2, (0, 0, 255), -1)
+
+        # paint microphone location
+        for dst in self.dst_pos_:
+            cv2.circle(img, dst, 2, (255, 255, 255), -1)
+
         cv2.imwrite(output_path, img)
 
 
@@ -73,7 +79,8 @@ class DataLoader(object):
                     each item is an integer in range(0, N). 0 represents wall, and 1 ~ N 
                     represents room index
                 map_data["n_room"] (int): number of rooms
-                map_data["center"] ( list of 2-item tuple (x, y) ): each 2-item tuple
+                map_data["origin"] ( tuple (int, int) ): the index of the origin of the map
+                map_data["center"] ( list of tuples (int, int) ): each 2-item tuple
                     represents a center of a room
         """
         map_data = {}
@@ -81,6 +88,7 @@ class DataLoader(object):
         map_data["data"] = self.segmented_map_
         map_data["n_room"] = self.n_rooms_
         map_data["center"] = self.room_centers_
+        map_data["origin"] = self.origin_
 
         return map_data
 
@@ -113,6 +121,8 @@ class DataLoader(object):
         n_samples = len(self.voice_file_dirs_) if n_samples is None else n_samples
 
         for i in idx[:n_samples]:
+            # load voice pickle file
+            # voice is store as a np.ndarray (frames, n_channels)
             voice_frames = np.load(self.voice_file_dirs_[i])
 
             data = self.__parse_voice_filename(self.voice_file_dirs_[i])
@@ -158,15 +168,88 @@ class DataLoader(object):
         return info
 
 
+    def __parse_map_data(self, map_data_dir):
+        """
+        Parsing map data
+    
+        Args:
+            map_data_dir (string): map data directory
+        """
+        # map_data (dictionary):
+        #     map_data["data"] ( np.ndarray (height, width) ): 2D room occupancy grid map,
+        #         each item is an integer in range(0, N). 0 represents wall, and 1 ~ N 
+        #         represents room index
+        #     map_data["n_room"] (int): number of rooms
+        #     map_data["origin"] ( dict (x, y) ): the origin of the map,
+        #         here the origin is not in the index form, but is in the meter form
+        #     map_data["resolution"] (double): meter per cell, origin / resolution is the
+        #         index of the origin
+        #     map_data["center"] ( list of 2-item tuple (x, y) ): each 2-item tuple
+        #         represents a center of a room
+        json_file=open(map_data_dir).read()
+        data = json.loads(json_file)
+
+        self.n_rooms_ = data["n_rooms"]
+        self.room_centers_ = [(c["x"], c["y"]) for c in data["room_centers"]]
+        self.segmented_map_ = np.asarray(data["map"], dtype=np.int32)
+        self.resolution_ = data["resolution"]
+        self.origin_ = (-int(data["origin"]["x"] / data["resolution"]), 
+            -int(data["origin"]["y"] / data["resolution"]))
+
+
+    def __parse_pos_tf(self, pos_tf_dir):
+        """
+        Parsing position transform file
+
+        Args:
+            pos_tf_dir (string): position transform file directory
+        """
+        # parse the position transform file
+        # the transform is in meter scale, use map resolution to calculate the index/cell scale
+        json_file = open(pos_tf_dir).read()
+        pos_tf = json.loads(json_file)
+        # real-world origin to simu-world origin transform (delta_x, delta_y)
+        # meter scale
+        real2simu_tf = pos_tf["real2simu_tf"]
+        # A list sound source locations [(x1, y1), ...] corresponding to the real world 
+        # origin (manually chosen), meter scale
+        src_pos = pos_tf["src"]
+        # A list microphone locations [(x1, y1), ...] corresponding to the real world 
+        # origin (manually chosen), meter scale
+        dst_pos = pos_tf["dst"]
+
+        # convert real-world origin to simu-world origin transform into cell-scale
+        delta_x = real2simu_tf["delta_x"] / self.resolution_
+        delta_y = real2simu_tf["delta_y"] / self.resolution_
+        self.real2simu_tf_ = (int(delta_x), int(delta_y))
+
+        # convert src position to cell-scale (in which cell is the sound source)
+        self.src_pos_ = []
+        # src 1 start from index 0
+        for src in src_pos:
+            x = src["x"] / self.resolution_ - self.real2simu_tf_[0] + self.origin_[0]
+            y = src["y"] / self.resolution_ - self.real2simu_tf_[1] + self.origin_[1]
+            self.src_pos_.append( (int(x), int(y)) )
+
+        # convert microphone position to cell-scale (in which cell is the sound source)
+        self.dst_pos_ = []
+        # dst 1 start from index 0
+        for dst in dst_pos:
+            x = dst["x"] / self.resolution_ - self.real2simu_tf_[0] + self.origin_[0]
+            y = dst["y"] / self.resolution_ - self.real2simu_tf_[1] + self.origin_[1]
+            self.dst_pos_.append( (int(x), int(y)) )
+
+
 def test():
     voice_data_dir = "../../data/active_voice"
     map_data_dir = "../../data/map/bh9f_lab_map.json"
+    pos_tf_dir = "../config/bh9f_pos_tf.json"
 
-    data_loader = DataLoader(voice_data_dir, map_data_dir)
+    data_loader = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir)
     data_loader.save_segmented_map()
 
     cnt = 0
-    for data in data_loader.voice_data_iterator(n_samples=100, seed=0):
+    for data in data_loader.voice_data_iterator(n_samples=10, seed=0):
         print("frame #%d: %r" % (cnt, data["frames"].shape))
         cnt += 1
 

@@ -12,7 +12,7 @@ dev:
 	sudo pip2 install -e .
 
 voice_preprocess:
-	python ciessl_app/voice_preprocess.py --data_in="data/raw_voice" --data_out="data/active_voice" \
+	python ciessl_app/tools/voice_preprocess.py --data_in="data/raw_voice" --data_out="data/active_voice" \
 		--chunk_interval=20 --mode=3
 
 train:
