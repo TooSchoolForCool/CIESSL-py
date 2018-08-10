@@ -105,10 +105,8 @@ class DataLoader(object):
         Yields:
             data (dictionary):
                 data["samplerate"] (int): samplerate of the voice data
-                data["src"] (int): source index (where sound source is placed)
-                data["dst"] (int): destination index (where mic array is placed)
-                data["room"] (int): room index (in which room mic array is placed)
-                data["idx"] (int): sample index (the i-th sample that in <src, dst> dataset)
+                data["src"] (int, int): coordinate of the sound source in the map
+                data["dst"] (int, int): coordinate of the microphone in the map
                 data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
         """
@@ -125,8 +123,13 @@ class DataLoader(object):
             # voice is store as a np.ndarray (frames, n_channels)
             voice_frames = np.load(self.voice_file_dirs_[i])
 
-            data = self.__parse_voice_filename(self.voice_file_dirs_[i])
+            info = self.__parse_voice_filename(self.voice_file_dirs_[i])
+
+            data = {}
             data["frames"] = voice_frames
+            data["samplerate"] = info["samplerate"]
+            data["src"] = self.src_pos_[info["src"] - 1]
+            data["dst"] = self.dst_pos_[info["dst"] - 1]
 
             yield data
 
@@ -191,6 +194,7 @@ class DataLoader(object):
 
         self.n_rooms_ = data["n_rooms"]
         self.room_centers_ = [(c["x"], c["y"]) for c in data["room_centers"]]
+        # to access the (x, y) point in the map, use map[y, x]
         self.segmented_map_ = np.asarray(data["map"], dtype=np.int32)
         self.resolution_ = data["resolution"]
         self.origin_ = (-int(data["origin"]["x"] / data["resolution"]), 
@@ -250,7 +254,8 @@ def test():
 
     cnt = 0
     for data in data_loader.voice_data_iterator(n_samples=10, seed=0):
-        print("frame #%d: %r" % (cnt, data["frames"].shape))
+        print("frame #%d: %r, src: %r, dst: %r" % (cnt, data["frames"].shape, 
+            data["src"], data["dst"]))
         cnt += 1
 
 
