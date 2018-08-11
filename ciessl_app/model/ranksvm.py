@@ -2,12 +2,12 @@ import itertools
 
 import numpy as np
 
-from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import SGDClassifier, SGDRegressor
 from sklearn import metrics
 from scipy import stats
 
 
-class RankSVM(SGDClassifier):
+class RankSVM(SGDRegressor):
     """Performs pointwise ranking with an underlying SGDClassifer model
     """
 
