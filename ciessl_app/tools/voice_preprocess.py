@@ -99,8 +99,8 @@ def main():
 
     # acquire all input data files
     for file in os.listdir(voice_dataset):
-        voice_file_dirs.append(os.path.join(voice_dataset, file))
-
+        if file.endswith(".wav"):
+            voice_file_dirs.append(os.path.join(voice_dataset, file))
     # trim active voice in each file
     for voice_file in voice_file_dirs:
         trim_active_voice(voice_file, args.data_out, sample_rate_out=48000, 
