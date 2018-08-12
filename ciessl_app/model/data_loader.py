@@ -26,7 +26,8 @@ class DataLoader(object):
         # load all files' directories in voice_data_dir
         self.voice_file_dirs_ = []
         for file in os.listdir(voice_data_dir):
-            self.voice_file_dirs_.append(os.path.join(voice_data_dir, file))
+            if file.endswith(".pickle"):
+                self.voice_file_dirs_.append(os.path.join(voice_data_dir, file))
 
         self.__parse_map_data(map_data_dir)
         self.__parse_pos_tf(pos_tf_dir)

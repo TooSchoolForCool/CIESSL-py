@@ -81,6 +81,8 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
         rank_svm.partial_fit(X, y)
         cnt += 1
 
+    evaluator.plot_acc_history()
+
 
 if __name__ == '__main__':
     args = arg_parser()
