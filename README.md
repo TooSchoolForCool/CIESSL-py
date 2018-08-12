@@ -11,7 +11,7 @@ This repo implements a python application which performs sound source localizati
 Before installing this package, several system dependencies need to be installed
 
 ```bash
-sudo apt-get install python-pyaudio libsamplerate0 portaudio19-dev
+sudo apt-get install python-pyaudio libsamplerate0 portaudio19-dev python-tk python-opencv
 sudo pip install wheel
 ```
 
