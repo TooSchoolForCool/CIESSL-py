@@ -16,11 +16,21 @@ class Pipeline(object):
     Data processing pipeline. Preparing training and testing samples for feeding
     into learning model.
     """
-    def __init__(self):
-        pass
+    def __init__(self, n_frames=18000, sound_fading_rate=0.998, mic_fading_rate=0.998):
+        """
+        Constructor
 
-    def prepare_training_data(self, map_data, voice_data, n_frames=18000, 
-        sound_fading_rate=0.998, mic_fading_rate=0.998):
+        Args:
+            n_frames (int): number of frames used to extract acoustic feature
+            sound_fading_rate (double): fading rate of sound flooding map
+            mic_fading_rate (double): fading rate of mic flooding map
+        """
+        self.n_frames_ = n_frames
+        self.sound_fading_rate_ = sound_fading_rate
+        self.mic_fading_rate_ = mic_fading_rate
+
+
+    def prepare_training_data(self, map_data, voice_data):
         """
         This function is used to prepare training data, which acquiring map and voice 
         data from DataLoader, and return corresponding feature vectors and lebals.
@@ -40,9 +50,6 @@ class Pipeline(object):
                 voice_data["dst"] (int, int): coordinate of the microphone in the map
                 voice_data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
-            n_frames (int): number of frames used to extract acoustic feature
-            sound_fading_rate (double): fading rate of sound flooding map
-            mic_fading_rate (double): fading rate of mic flooding map
         Returns:
             X ( np.array (n_samples, n_features) ): feature set
             y ( np.array (n_samples,) ): label set
@@ -52,19 +59,20 @@ class Pipeline(object):
         frame_stack = voice_data["frames"]
         samplerate = voice_data["samplerate"]
 
+        # calculate sound feature
         flatten_sound_feature = []
         for i in range(0, frame_stack.shape[1]):
-            amp, phase = self.__fixed_len_stft(frame_stack[:, i], samplerate, n_frames)
+            f, t, amp, phase = self.__fixed_len_stft(frame_stack[:, i], samplerate, self.n_frames_)
             flatten_sound_feature = np.append(flatten_sound_feature, phase.flatten())
 
         src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
-
-        # print("[pipeline] src: %r --> room %d" % (voice_data["src"], src_room))
+        
         for i in range(0, map_data["n_room"]):
+            # form map feature
             src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][i], 
-                sound_fading_rate)
+                self.sound_fading_rate_)
             mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
-                mic_fading_rate)
+                self.mic_fading_rate_)
             product_map = self.__product_mask(src_flooding_map, mic_flooding_map)
             flatten_map = product_map.flatten()
 
@@ -160,7 +168,7 @@ class Pipeline(object):
         assert(len(frames) >= n_frames)
 
         f, t, amp, phase = stft(frames[:n_frames], sample_rate)
-        return amp, phase
+        return f, t, amp, phase
 
 
 def test():

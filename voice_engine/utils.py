@@ -22,10 +22,13 @@ def resample(raw_frames, input_rate, target_rate, n_channels, dtype, converter_t
     return resampled_frames
 
 
-def view_spectrum(time, freq, spec, title):
+def view_spectrum(time, freq, spec, title, save=False):
     plt.pcolormesh(time, freq, spec)
     plt.ylabel('Frequency [Hz]')
     plt.xlabel('Time [sec]')
     plt.title(title)
 
-    plt.show()
+    if save:
+        plt.savefig(title + ".png")
+    else:
+        plt.show()

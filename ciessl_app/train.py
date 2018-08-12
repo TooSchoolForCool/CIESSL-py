@@ -52,13 +52,13 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
 
-    pipe = Pipeline()
+    pipe = Pipeline(n_frames=18000, sound_fading_rate=0.999, mic_fading_rate=0.993)
 
     # preparing init training set
     init_training_X = None
     init_training_y = None
     for voice in dl.voice_data_iterator(n_samples=10, seed=0):
-        X, y = pipe.prepare_training_data(map_data, voice, n_frames=21000)
+        X, y = pipe.prepare_training_data(map_data, voice)
         if init_training_X is None:
             init_training_X = X
             init_training_y = y
@@ -71,8 +71,8 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
     for voice in dl.voice_data_iterator(seed=1):
-        print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
-        X, y = pipe.prepare_training_data(map_data, voice, n_frames=21000)
+        # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
+        X, y = pipe.prepare_training_data(map_data, voice)
         predicted_y = rank_svm.predict(X)
 
         evaluator.evaluate(y, predicted_y)
