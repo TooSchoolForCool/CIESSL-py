@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Evaluator(object):
@@ -8,6 +9,9 @@ class Evaluator(object):
         # scoreboard_[i] indicates the total times that find the 
         # target within `i+1` trials
         self.scoreboard_ = [0 for _ in range(n_rooms)]
+
+        # scoreboard accuracy history (scoreboard / total_exp)
+        self.acc_history_ = []
 
         # number of experiments
         self.total_exp_ = 0
@@ -25,15 +29,38 @@ class Evaluator(object):
             if room_idx == target_room:
                 for i in range(rank, self.n_rooms_):
                     self.scoreboard_[i] += 1
-
+        
         self.total_exp_ += 1
+        self.acc_history_.append([1.0 * score / self.total_exp_ for score in self.scoreboard_])
 
 
     def get_eval_result(self):
         """
         Calculate the probability that find the target within `i` trials
         """
-        return [1.0 * score / self.total_exp_ for score in self.scoreboard_]
+        return self.acc_history_[-1]
+
+
+    def plot_acc_history(self, n_lines=3):
+        palette = "bgrcmykw"
+
+        data = np.asarray(self.acc_history_)
+
+        plt.title("Accuracy Trendline")
+        plt.xlabel("Number of Learned Samples")
+        plt.ylabel("Accuracy")
+
+        x = [xi for xi in range(1, data.shape[0] + 1)]
+        for i in range(0, n_lines):  
+            y = data[:, i]
+            color = palette[i % len(palette)]
+
+            plt.plot(x, y, color, label="Goal within " + str(i + 1) + " trails")
+
+        # plt.xticks(x, x, rotation=0)
+        plt.legend()
+        plt.grid()
+        plt.show()
 
 
     def __find_target_room(self, y):
@@ -68,30 +95,33 @@ class Evaluator(object):
 def test_evaluator():
     evaluator = Evaluator(n_rooms=4)
 
-    y = np.array([0, 0, 1, 0])
-    py = np.array([0.3, 0.8, 0.6, 0.4])
-    evaluator.evaluate(y, py)
-    print(evaluator.get_eval_result())
+    for _ in range(0, 10):
+        y = np.array([0, 0, 1, 0])
+        py = np.array([0.3, 0.8, 0.6, 0.4])
+        evaluator.evaluate(y, py)
+        print(evaluator.get_eval_result())
 
-    y = np.array([0, 1, 0, 0])
-    py = np.array([0.3, 0.8, 0.6, 0.4])
-    evaluator.evaluate(y, py)
-    print(evaluator.get_eval_result())
+        y = np.array([0, 1, 0, 0])
+        py = np.array([0.3, 0.8, 0.6, 0.4])
+        evaluator.evaluate(y, py)
+        print(evaluator.get_eval_result())
 
-    y = np.array([0, 0, 0, 1])
-    py = np.array([0.3, 0.8, 0.6, 0.4])
-    evaluator.evaluate(y, py)
-    print(evaluator.get_eval_result())
+        y = np.array([0, 0, 0, 1])
+        py = np.array([0.3, 0.8, 0.6, 0.4])
+        evaluator.evaluate(y, py)
+        print(evaluator.get_eval_result())
 
-    y = np.array([1, 0, 0, 0])
-    py = np.array([0.3, 0.8, 0.6, 0.4])
-    evaluator.evaluate(y, py)
-    print(evaluator.get_eval_result())
+        y = np.array([1, 0, 0, 0])
+        py = np.array([0.3, 0.8, 0.6, 0.4])
+        evaluator.evaluate(y, py)
+        print(evaluator.get_eval_result())
 
-    y = np.array([0, 0, 1, 0])
-    py = np.array([0.3, 0.8, 0.6, 0.4])
-    evaluator.evaluate(y, py)
-    print(evaluator.get_eval_result())
+        y = np.array([0, 0, 1, 0])
+        py = np.array([0.3, 0.8, 0.6, 0.4])
+        evaluator.evaluate(y, py)
+        print(evaluator.get_eval_result())
+
+    evaluator.plot_acc_history()
 
 
 if __name__ == '__main__':
