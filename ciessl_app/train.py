@@ -1,6 +1,7 @@
 import argparse
 
 import numpy as np
+from sklearn.neural_network import MLPRegressor
 
 from voice_engine.signal_process import stft
 from voice_engine.utils import view_spectrum
@@ -48,7 +49,8 @@ def arg_parser():
 
 
 def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
-    rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
+    # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
+    rank_svm = MLPRegressor(solver="adam", alpha=0.001)
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
 
@@ -57,7 +59,7 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
     # preparing init training set
     init_training_X = None
     init_training_y = None
-    for voice in dl.voice_data_iterator(n_samples=10, seed=0):
+    for voice in dl.voice_data_iterator(n_samples=5, seed=0):
         X, y = pipe.prepare_training_data(map_data, voice)
         if init_training_X is None:
             init_training_X = X
@@ -66,7 +68,8 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
             init_training_X = np.append(init_training_X, X, axis=0)
             init_training_y = np.append(init_training_y, y, axis=0)
 
-    rank_svm.fit(X, y)
+    print(init_training_X.shape)
+    rank_svm.partial_fit(init_training_X, init_training_y)
 
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
@@ -77,7 +80,11 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
 
         evaluator.evaluate(y, predicted_y)
 
-        print("sample %d: %r" % (cnt, evaluator.get_eval_result()))
+        print("Sample %d" % cnt)
+        print("y:\t%r" % (y))
+        print("pred:\t%r" % (predicted_y))
+        print("acc: %r" % (evaluator.get_eval_result()))
+
         rank_svm.partial_fit(X, y)
         cnt += 1
 
