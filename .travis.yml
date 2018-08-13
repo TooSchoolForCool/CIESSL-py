@@ -10,6 +10,8 @@ before_install:
 - sudo apt-get install python-pyaudio
 - sudo apt-get install libsamplerate0
 - sudo apt-get install portaudio19-dev
+- sudo apt-get install python-tk
+- sudo apt-get install python-opencv
 
 install:
 - python setup.py bdist_wheel
