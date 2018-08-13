@@ -57,6 +57,8 @@ class Evaluator(object):
 
             plt.plot(x, y, color, label="Goal within " + str(i + 1) + " trails")
 
+        y_axis = [0.2 * i for i in range(0, 6)]
+        plt.yticks(y_axis, y_axis, rotation=0)
         # plt.xticks(x, x, rotation=0)
         plt.legend()
         plt.grid()
@@ -121,7 +123,7 @@ def test_evaluator():
         evaluator.evaluate(y, py)
         print(evaluator.get_eval_result())
 
-    evaluator.plot_acc_history()
+    evaluator.plot_acc_history(1)
 
 
 if __name__ == '__main__':
