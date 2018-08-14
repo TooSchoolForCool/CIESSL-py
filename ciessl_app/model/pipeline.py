@@ -4,8 +4,8 @@ import json
 import Queue
 
 import numpy as np
-from voice_engine.signal_process import stft
-from voice_engine.utils import view_spectrum
+from voice_engine.signal_process import stft, gcc_phat
+from voice_engine.utils import view_spectrum, view_gccphat
 
 sys.path.append(os.path.abspath(os.path.join("..")))
 from utils import save_segmented_map, show_flooding_map
@@ -16,7 +16,8 @@ class Pipeline(object):
     Data processing pipeline. Preparing training and testing samples for feeding
     into learning model.
     """
-    def __init__(self, n_frames=18000, sound_fading_rate=0.998, mic_fading_rate=0.998):
+    def __init__(self, n_frames=18000, sound_fading_rate=0.998, mic_fading_rate=0.998,
+        gccphat_size=15):
         """
         Constructor
 
@@ -24,13 +25,16 @@ class Pipeline(object):
             n_frames (int): number of frames used to extract acoustic feature
             sound_fading_rate (double): fading rate of sound flooding map
             mic_fading_rate (double): fading rate of mic flooding map
+            gccphat_size (int): the size of gcc_phat pattern (2 * gccphat_size + 1).
+                We extract the cross-correlation around the center of gcc_phat
         """
         self.n_frames_ = n_frames
         self.sound_fading_rate_ = sound_fading_rate
         self.mic_fading_rate_ = mic_fading_rate
+        self.gccphat_size_ = gccphat_size
 
 
-    def prepare_training_data(self, map_data, voice_data):
+    def prepare_training_data(self, map_data, voice_data, voice_feature="stft"):
         """
         This function is used to prepare training data, which acquiring map and voice 
         data from DataLoader, and return corresponding feature vectors and lebals.
@@ -47,6 +51,7 @@ class Pipeline(object):
             voice_data (dictionary):
                 voice_data["samplerate"] (int): samplerate of the voice data
                 voice_data["src"] (int, int): coordinate of the sound source in the map
+                voice_data["src_idx"] (int): sound source index
                 voice_data["dst"] (int, int): coordinate of the microphone in the map
                 voice_data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
@@ -60,27 +65,29 @@ class Pipeline(object):
         samplerate = voice_data["samplerate"]
 
         # calculate sound feature
-        flatten_sound_feature = []
-        for i in range(0, frame_stack.shape[1]):
-            f, t, amp, phase = self.__fixed_len_stft(frame_stack[:, i], samplerate, self.n_frames_)
-            flatten_sound_feature = np.append(flatten_sound_feature, phase.flatten())
+        sound_feature = None
+        if voice_feature == "stft":
+            sound_feature = self.__extract_stft(frame_stack, samplerate)
+        elif voice_feature == "gccphat":
+            sound_feature = self.__extract_gccphat(frame_stack, samplerate)
+            view_gccphat(sound_feature, "gccphat feature of src: " + str(voice_data["src_idx"]))
 
-        src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
+        # src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
         
-        for i in range(0, map_data["n_room"]):
-            # form map feature
-            src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][i], 
-                self.sound_fading_rate_)
-            mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
-                self.mic_fading_rate_)
-            product_map = self.__product_mask(src_flooding_map, mic_flooding_map)
-            flatten_map = product_map.flatten()
+        # for i in range(0, map_data["n_room"]):
+        #     # form map feature
+        #     src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][i], 
+        #         self.sound_fading_rate_)
+        #     mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
+        #         self.mic_fading_rate_)
+        #     product_map = self.__product_mask(src_flooding_map, mic_flooding_map)
+        #     flatten_map = product_map.flatten()
 
-            feature_vec = np.append(flatten_sound_feature, flatten_map)
-            label = 1 if src_room == i + 1 else 0
+        #     feature_vec = np.append(sound_feature, flatten_map)
+        #     label = 1 if src_room == i + 1 else 0
 
-            X.append(feature_vec)
-            y.append(label)
+        #     X.append(feature_vec)
+        #     y.append(label)
 
         X = np.asarray(X)
         y = np.asarray(y)
@@ -171,6 +178,59 @@ class Pipeline(object):
         return f, t, amp, phase
 
 
+    def __extract_stft(self, frame_stack, samplerate):
+        flatten_sound_feature = []
+        
+        for i in range(0, frame_stack.shape[1]):
+            f, t, amp, phase = self.__fixed_len_stft(frame_stack[:, i], samplerate, self.n_frames_)
+            flatten_sound_feature = np.append(flatten_sound_feature, phase.flatten())
+        
+        return flatten_sound_feature
+
+
+    def __extract_gccphat(self, frame_stack, samplerate):
+        """
+        Calculate gccphat pattern
+
+        Args:
+            frame_stack (np.ndarray (n_samples, n_chennals)): Audio frame stack
+            samplerate (int): audio source sample rate
+
+        Returns:
+            gccphat_pattern (np.ndarray (gccphat_size, n_pairs)): gcc_phat pattern feature
+        """
+        n_channels = frame_stack.shape[1]
+
+        gccphat_pattern = []
+        for i in range(0, n_channels):
+            for j in range(i+1, n_channels):
+                tau, cc, center = gcc_phat(frame_stack[:, i], frame_stack[:, j], samplerate)
+                # crop gcc_phat features
+                if center - self.gccphat_size_ < 0:
+                    cc_feature = cc[0 : 2 * self.gccphat_size_]
+                elif center + self.gccphat_size_ >= cc.shape[0]:
+                    cc_feature = cc[-2 * self.gccphat_size_ : ]
+                else:
+                    cc_feature = cc[center - self.gccphat_size_ : center + self.gccphat_size_]
+
+                # check feature size
+                try:
+                    assert(cc_feature.shape[0] == 2 * self.gccphat_size_)
+                except:
+                    print("[ERROR] __extract_gccphat: gcc_phat feature size does not" + 
+                        " match want size %d but what actually get is: %d" % 
+                        (2 * self.gccphat_size_, cc_feature.shape[0]))
+                    print("cc shape: %r" % (cc.shape))
+                    print("center: %d" % center)
+                    raise
+                
+                gccphat_pattern.append(cc_feature)
+
+        # (gccphat_size, n_pairs)
+        # gccphat_pattern[:, 0]: pair 0 gccphat feature
+        gccphat_pattern = np.asarray(gccphat_pattern).T
+        return gccphat_pattern
+
 def test():
     from data_loader import DataLoader
 
@@ -182,8 +242,11 @@ def test():
     map_data = dl.load_map_info()
 
     pipe = Pipeline()
-    for voice in dl.voice_data_iterator(n_samples=1):
-        ret = pipe.prepare_training_data(map_data, voice, n_frames=21000)
+    for voice in dl.voice_data_iterator(seed=5):
+        src = voice["src_idx"]
+        if src != 8:
+            continue
+        ret = pipe.prepare_training_data(map_data, voice, voice_feature="gccphat")
 
 
 if __name__ == '__main__':

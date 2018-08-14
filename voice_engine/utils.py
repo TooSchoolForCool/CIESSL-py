@@ -32,3 +32,17 @@ def view_spectrum(time, freq, spec, title, save=False):
         plt.savefig(title + ".png")
     else:
         plt.show()
+
+
+def view_gccphat(spec_grid, title, save=False):
+    plt.pcolormesh(spec_grid)
+    plt.title(title)
+
+    plt.ylabel("GCC-PHAT Feature")
+    plt.xlabel("Pair Index")
+    plt.colorbar()
+
+    if save:
+        plt.savefig(title + ".png")
+    else:
+        plt.show()
