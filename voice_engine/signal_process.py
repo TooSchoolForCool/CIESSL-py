@@ -5,10 +5,8 @@ import global_var
 
 
 def float32_to_int16(frames):
-    def __float32_to_int16(x):
-        return x * (0x7FFF + 0.5) - 0.5
-
-    vectorize_func = np.vectorize(__float32_to_int16)
+    convert_float32_to_int16 = lambda x : (x * (0x7FFF + 0.5) - 0.5)
+    vectorize_func = np.vectorize(convert_float32_to_int16)
 
     return vectorize_func(frames)
 
@@ -41,6 +39,58 @@ def stft(frames, sample_rate, window=('tukey', .25), segment_size=None, overlap_
     return freqs, time, amp, phase
 
 
+def gcc_phat(sig, refsig, sample_rate, max_tau=None, interp=16):
+    """
+    This function computes the offset between the signal sig and the reference signal refsig
+    using the Generalized Cross Correlation - Phase Transform (GCC-PHAT)method.
+
+    Args:
+        sig ( np.ndarray (n_frames, ) ): the first voice signal
+        refsig ( np.ndarray (n_frames, ) ): the second voice signal (reference signal)
+        sample_rate (int): sample rate of the signal
+        max_tau (float): pre-calculated maximum time delay
+        interp (int): interpolation
+
+    Returns:
+        tau (float): Time Delay
+        inv_cc (np.array (gcc_phat_len, )): cross-correlation between signals
+        center (int): the index of the center, where TDOA is 0, of the cross-correlation
+            coefficients
+    """
+    
+    # make sure the length for the FFT is larger or equal than len(sig) + len(refsig)
+    n = sig.shape[0] + refsig.shape[0]
+
+    # Generalized Cross Correlation Phase Transform
+    SIG = np.fft.rfft(sig, n=n)
+    REFSIG = np.fft.rfft(refsig, n=n)
+    R = SIG * np.conj(REFSIG)
+
+    cc = R / np.abs(R)
+    inv_cc = np.fft.irfft(cc, n=(interp * n))
+
+    max_shift = int(interp * n / 2)
+    if max_tau:
+        max_shift = np.minimum(int(interp * sample_rate * max_tau), max_shift)
+
+    inv_cc = np.concatenate((inv_cc[-max_shift:], inv_cc[:max_shift+1]))
+
+    # find max cross correlation index
+    shift = np.argmax(np.abs(inv_cc)) - max_shift
+    
+    # print("shift = %d" % shift)
+    # print("max_shift = %d" % max_shift)
+
+    tau = shift / float(interp * sample_rate)
+    center = max_shift + shift
+
+    return tau, inv_cc, center
+
+
+################################################################
+# Test Cases
+################################################################
+
 def test_converter():
     A = np.array([[-1.0, 1.0], [0.5, -0.5], [0, 0]])
     print(A)
@@ -48,5 +98,20 @@ def test_converter():
     print(A)
 
 
+def test_gcc_phat():
+    import matplotlib.pyplot as plt
+
+    voice_file = "../data/active_voice/48000-7-1-3-4.pickle"
+    voice_frames = np.load(voice_file)
+
+    tau, cc, center = gcc_phat(voice_frames[:, 1], voice_frames[:, 7], 48000, interp=1)
+
+    print(tau)
+    print(cc.shape)
+    plt.plot(cc[center-15 : center+15])
+    # plt.plot(cc)
+    plt.show()
+
+
 if __name__ == '__main__':
-    test_converter()
+    test_gcc_phat()
