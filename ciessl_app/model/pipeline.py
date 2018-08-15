@@ -34,7 +34,8 @@ class Pipeline(object):
         self.gccphat_size_ = gccphat_size
 
 
-    def prepare_training_data(self, map_data, voice_data, voice_feature="stft"):
+    def prepare_training_data(self, map_data, voice_data, voice_feature="stft", 
+        map_feature="flooding_map"):
         """
         This function is used to prepare training data, which acquiring map and voice 
         data from DataLoader, and return corresponding feature vectors and lebals.
@@ -61,20 +62,22 @@ class Pipeline(object):
         """
         X = []
         y = []
+        
+        # calculate sound feature
         frame_stack = voice_data["frames"]
         samplerate = voice_data["samplerate"]
-
-        # calculate sound feature
         sound_feature = None
+        
         if voice_feature == "stft":
             sound_feature = self.__extract_stft(frame_stack, samplerate)
         elif voice_feature == "gccphat":
-            sound_feature = self.__extract_gccphat(frame_stack, samplerate)
-            view_gccphat(sound_feature, "gccphat feature of src: " + str(voice_data["src_idx"]))
+            sound_feature = self.__extract_gccphat(frame_stack, samplerate).flatten()
 
-        # src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
+        src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
         
         # for i in range(0, map_data["n_room"]):
+        #     if src_room != i + 1:
+        #         continue
         #     # form map feature
         #     src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][i], 
         #         self.sound_fading_rate_)
@@ -84,10 +87,14 @@ class Pipeline(object):
         #     flatten_map = product_map.flatten()
 
         #     feature_vec = np.append(sound_feature, flatten_map)
-        #     label = 1 if src_room == i + 1 else 0
+        #     # label = 1 if src_room == i + 1 else 0
+        #     label = src_room
 
         #     X.append(feature_vec)
         #     y.append(label)
+
+        X.append(sound_feature)
+        y.append(src_room)
 
         X = np.asarray(X)
         y = np.asarray(y)
@@ -231,6 +238,7 @@ class Pipeline(object):
         gccphat_pattern = np.asarray(gccphat_pattern).T
         return gccphat_pattern
 
+
 def test():
     from data_loader import DataLoader
 
@@ -242,11 +250,10 @@ def test():
     map_data = dl.load_map_info()
 
     pipe = Pipeline()
-    for voice in dl.voice_data_iterator(seed=5):
-        src = voice["src_idx"]
-        if src != 8:
-            continue
-        ret = pipe.prepare_training_data(map_data, voice, voice_feature="gccphat")
+    for voice in dl.voice_data_iterator(n_samples=5, seed=1):
+        X, y = pipe.prepare_training_data(map_data, voice, voice_feature="gccphat")
+        print(X.shape)
+        print(y.shape)
 
 
 if __name__ == '__main__':

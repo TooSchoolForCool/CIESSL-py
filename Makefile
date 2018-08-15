@@ -17,4 +17,4 @@ voice_preprocess:
 
 train:
 	python ciessl_app/train.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json" \
-		--config="ciessl_app/config/bh9f_pos_tf.json"
+		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf"

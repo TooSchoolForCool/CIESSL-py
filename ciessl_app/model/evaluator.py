@@ -18,17 +18,16 @@ class Evaluator(object):
 
 
     def evaluate(self, y, predicted_y):
-        assert(len(y) == self.n_rooms_)
-        assert(len(predicted_y) == self.n_rooms_)
+        assert(len(y) == len(predicted_y))
 
-        # room index start from 1
-        target_room = self.__find_target_room(y)
-        room_ranking = self.__calc_room_ranking(predicted_y)
+        for target, predicted_prob in zip(y, predicted_y):
+            assert(len(predicted_prob) == self.n_rooms_)
 
-        for rank, room_idx in enumerate(room_ranking):
-            if room_idx == target_room:
-                for i in range(rank, self.n_rooms_):
-                    self.scoreboard_[i] += 1
+            ranking = self.__calc_room_ranking(predicted_prob)
+            for rank, room_idx in enumerate(ranking):
+                if room_idx == target:
+                    for i in range(rank, self.n_rooms_):
+                        self.scoreboard_[i] += 1
         
         self.total_exp_ += 1
         self.acc_history_.append([1.0 * score / self.total_exp_ for score in self.scoreboard_])

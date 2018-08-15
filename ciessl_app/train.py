@@ -1,7 +1,7 @@
 import argparse
 
 import numpy as np
-from sklearn.neural_network import MLPRegressor
+from sklearn.neural_network import MLPRegressor, MLPClassifier
 
 from voice_engine.signal_process import stft
 from voice_engine.utils import view_spectrum
@@ -42,15 +42,23 @@ def arg_parser():
         required=True,
         help="Training set configuration file directory"
     )
+    parser.add_argument(
+        "--mode",
+        dest="mode",
+        type=str,
+        required=True,
+        help="choose learning mode: classification / regression"
+    )
     
     args = parser.parse_args()
 
     return args
 
 
-def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
+def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir):
     # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
-    rank_svm = MLPRegressor(solver="adam", alpha=0.001)
+    rank_svm = MLPClassifier(solver="adam")
+
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
 
@@ -60,7 +68,7 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
     init_training_X = None
     init_training_y = None
     for voice in dl.voice_data_iterator(n_samples=5, seed=0):
-        X, y = pipe.prepare_training_data(map_data, voice)
+        X, y = pipe.prepare_training_data(map_data, voice, voice_feature="gccphat")
         if init_training_X is None:
             init_training_X = X
             init_training_y = y
@@ -68,15 +76,15 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
             init_training_X = np.append(init_training_X, X, axis=0)
             init_training_y = np.append(init_training_y, y, axis=0)
 
-    print(init_training_X.shape)
-    rank_svm.partial_fit(init_training_X, init_training_y)
+    classes = [i for i in range(1, map_data["n_room"] + 1)]
+    rank_svm.partial_fit(init_training_X, init_training_y, classes=classes)
 
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
-    for voice in dl.voice_data_iterator(seed=1):
+    for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
-        X, y = pipe.prepare_training_data(map_data, voice)
-        predicted_y = rank_svm.predict(X)
+        X, y = pipe.prepare_training_data(map_data, voice, voice_feature="gccphat") 
+        predicted_y = rank_svm.predict_proba(X)
 
         evaluator.evaluate(y, predicted_y)
 
@@ -91,7 +99,15 @@ def train_model(voice_data_dir, map_data_dir, pos_tf_dir):
     evaluator.plot_acc_history()
 
 
+def train_model(voice_data_dir, map_data_dir, pos_tf_dir, mode):
+    if mode == "clf":
+        classification_mode(voice_data_dir, map_data_dir, pos_tf_dir)
+    elif mode == "reg":
+        pass
+
+
 if __name__ == '__main__':
     args = arg_parser()
     
-    train_model(voice_data_dir=args.voice, map_data_dir=args.map, pos_tf_dir=args.config)
+    train_model(voice_data_dir=args.voice, map_data_dir=args.map, pos_tf_dir=args.config,
+        mode=args.mode)
