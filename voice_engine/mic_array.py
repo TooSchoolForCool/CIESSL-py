@@ -36,6 +36,8 @@ class MicArray(AudioSource):
         self.n_channels_ = n_channels
         self.sample_rate_in_ = sample_rate_in
         self.sample_rate_out_ = sample_rate_out
+        # chunk time interval (in second)
+        self.chunk_interval_ = 1.0 * chunk_size / sample_rate_in
         self.chunk_size_ = chunk_size
         self.pyaudio_format_ = STR2PYAUDIO_FORMAT[format_in]
         self.np_format_ = STR2NUMPY_FORMAT[format_in]
@@ -129,6 +131,10 @@ class MicArray(AudioSource):
 
     def get_sample_rate_out(self):
         return self.sample_rate_out_
+
+
+    def get_chunk_interval(self):
+        self.chunk_interval_
 
 
     def is_active(self):

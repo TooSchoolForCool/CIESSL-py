@@ -26,3 +26,7 @@ class AudioSource(object):
     @abstractmethod
     def get_channels(self):
         pass
+
+    @abstractmethod
+    def get_chunk_interval(self):
+        pass

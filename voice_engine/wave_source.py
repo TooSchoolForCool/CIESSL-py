@@ -22,6 +22,9 @@ class WaveSource(AudioSource):
         except:
             self.n_channels_ = 1
 
+        # chunk time interval (in second)
+        self.chunk_interval_ = chunk_time_interval / 1000.0
+        
         self.sample_rate_out_ = self.sample_rate_in_ if sample_rate_out is None else sample_rate_out
         self.chunk_size_ = self.sample_rate_in_ * chunk_time_interval / 1000
         self.fp_ = 0
@@ -83,6 +86,10 @@ class WaveSource(AudioSource):
 
     def get_dtype(self):
         return self.format_in_
+
+
+    def get_chunk_interval(self):
+        return self.chunk_interval_
 
 
     def __resample(self, raw_frames):
