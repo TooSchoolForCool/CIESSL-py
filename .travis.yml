@@ -12,6 +12,8 @@ before_install:
 - sudo apt-get install portaudio19-dev
 - sudo apt-get install python-tk
 - sudo apt-get install python-opencv
+- pip install http://download.pytorch.org/whl/cpu/torch-0.4.1-cp27-cp27mu-linux_x86_64.whl
+- pip install torchvision
 
 install:
 - python setup.py bdist_wheel

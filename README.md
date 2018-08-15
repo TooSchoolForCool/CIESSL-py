@@ -15,6 +15,13 @@ sudo apt-get install python-pyaudio libsamplerate0 portaudio19-dev python-tk pyt
 sudo pip install wheel
 ```
 
+Then [PyTorch](https://pytorch.org) needs to be installed, for the use of [ciessl_app](ciessl_app). In this repo, we adopt PyTorch-0.4.1. Try following command to install the PyTorch
+
+```bash
+sudo pip install http://download.pytorch.org/whl/cpu/torch-0.4.1-cp27-cp27mu-linux_x86_64.whl
+sudo pip install torchvision
+```
+
 Then use following command to install this package
 
 ```bash
