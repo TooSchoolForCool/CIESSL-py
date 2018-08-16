@@ -3,6 +3,7 @@ import os
 import torch
 from torch import nn
 from torch.autograd import Variable
+import torch.nn.functional as F
 
 
 class AutoEncoder(nn.Module):
@@ -55,6 +56,65 @@ class AutoEncoder(nn.Module):
         self.decoder_ = nn.Sequential(*net)
 
 
+class VAE(nn.Module):
+    def __init__(self):
+        super(VAE, self).__init__()
+
+        self.fc1 = nn.Linear(18000, 9000)
+        self.fc2 = nn.Linear(9000, 3000)
+        self.fc31 = nn.Linear(3000, 300)
+        self.fc32 = nn.Linear(3000, 300)
+
+        self.fc4 = nn.Linear(300, 3000)
+        self.fc5 = nn.Linear(3000, 9000)
+        self.fc6 = nn.Linear(9000, 18000)
+
+
+    def encode(self, x):
+        h1 = F.relu(self.fc1(x))
+        h2 = F.relu(self.fc2(h1))
+        return self.fc31(h2), self.fc32(h2)
+
+
+    def reparametrize(self, mu, logvar):
+        std = logvar.mul(0.5).exp_()
+        if torch.cuda.is_available():
+            eps = torch.cuda.FloatTensor(std.size()).normal_()
+        else:
+            eps = torch.FloatTensor(std.size()).normal_()
+        eps = Variable(eps)
+        return eps.mul(std).add_(mu)
+
+
+    def decode(self, z):
+        h4 = F.relu(self.fc4(z))
+        h5 = F.relu(self.fc5(h4))
+
+        return torch.sigmoid( self.fc6(h5) )
+
+
+    def forward(self, x):
+        mu, logvar = self.encode(x)
+        z = self.reparametrize(mu, logvar)
+        return self.decode(z), mu, logvar
+
+
+    def loss(self, recon_x, x, mu, logvar):
+        """
+        Args:
+            recon_x: generating images
+            x: origin images
+            mu: latent mean
+            logvar: latent log variance
+        """
+        reconstruction_function = nn.MSELoss(size_average=False)
+        BCE = reconstruction_function(recon_x, x)  # mse loss
+        # loss = 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+        KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
+        KLD = torch.sum(KLD_element).mul_(-0.5)
+        # KL divergence
+        return BCE + KLD
+
 
 def test_autoencoder():
     from data_loader import DataLoader
@@ -68,19 +128,25 @@ def test_autoencoder():
     batch_size = 128
     learning_rate = 1e-3
     n_frames = 18000
-    nn_structure = [18000, 12000, 6000, 2000, 500]
+    nn_structure = [18000, 9000, 3000, 300]
 
     model = AutoEncoder(nn_structure=nn_structure)
+
+    if torch.cuda.is_available():
+        print("[INFO] CUDA is available")
+        model.cuda()
 
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     for epoch in range(num_epochs):
-        for voice in dl.voice_data_iterator(seed=1):
+        for voice in dl.voice_data_iterator(n_samples=1, seed=1):
             voice_frames = voice["frames"]
             for i in range(0, voice_frames.shape[1]):
                 frames = torch.Tensor(voice_frames[:n_frames, i])
                 frames = Variable(frames)
+                if torch.cuda.is_available():
+                    frames = frames.cuda()
                 # ===================forward=====================
                 output = model.forward(frames)
                 loss = criterion(output, frames)
@@ -88,12 +154,60 @@ def test_autoencoder():
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+                print("channel {} opt".format(i + 1))
         # ===================log========================
-        print('epoch [{}/{}], loss:{:.4f}'
-              .format(epoch + 1, num_epochs, loss.data[0]))
+        print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, loss.data[0]))
 
     torch.save(model.state_dict(), './voice_autoencoder.pth')
 
 
+def test_vae():
+    from data_loader import DataLoader
+
+    voice_data_dir = "../../data/active_voice"
+    map_data_dir = "../../data/map/bh9f_lab_map.json"
+    pos_tf_dir = "../config/bh9f_pos_tf.json"
+    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir)
+
+    num_epochs = 100
+    batch_size = 128
+    learning_rate = 1e-3
+    n_frames = 18000
+
+    model = VAE()
+    if torch.cuda.is_available():
+        print("[INFO] CUDA is available")
+        model.cuda()
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    for epoch in range(num_epochs):
+        model.train()
+        train_loss = 0
+        cnt = 0
+        for voice in dl.voice_data_iterator(n_samples=1, seed=1):
+            voice_frames = voice["frames"]
+            for i in range(0, voice_frames.shape[1]):
+                frames = torch.Tensor(voice_frames[:n_frames, i])
+                frames = Variable(frames)
+                if torch.cuda.is_available():
+                    frames = frames.cuda()
+
+                optimizer.zero_grad()
+                recon_batch, mu, logvar = model(frames)
+                loss = model.loss(recon_batch, frames, mu, logvar)
+                loss.backward()
+                train_loss += loss.item()
+                optimizer.step()
+                cnt += 1
+                print("channel {}".format(cnt))
+
+        print('====> Epoch: {} Average loss: {:.4f}'.format(
+            epoch, 1.0 * train_loss / cnt))
+
+    torch.save(model.state_dict(), './voice_vae.pth')
+
+
 if __name__ == '__main__':
-    test_autoencoder()
+    # test_autoencoder()
+    test_vae()
