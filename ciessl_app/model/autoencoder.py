@@ -82,9 +82,22 @@ class VoiceVAE(nn.Module):
 
 
     def encode(self, x):
+        """
+        Encode for using the autoencoder
+        """
+        h1 = F.relu(self.fc1(x))
+
+        mu = self.fc21(h1)
+        logvar = self.fc22(h1)
+
+        return self.reparametrize(mu, logvar)
+
+    def encode_(self, x):
+        """
+        Encode for training
+        """
         h1 = F.relu(self.fc1(x))
         return self.fc21(h1), self.fc22(h1)
-
 
     def reparametrize(self, mu, logvar):
         std = logvar.mul(0.5).exp_()
@@ -98,11 +111,11 @@ class VoiceVAE(nn.Module):
 
     def decode(self, z):
         h3 = F.relu(self.fc3(z))
-        return nn.Tanh( self.fc4(h3) )
+        return torch.tanh( self.fc4(h3) )
 
 
     def forward(self, x):
-        mu, logvar = self.encode(x)
+        mu, logvar = self.encode_(x)
         z = self.reparametrize(mu, logvar)
         return self.decode(z), mu, logvar
 

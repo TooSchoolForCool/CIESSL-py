@@ -78,7 +78,7 @@ class Pipeline(object):
             sound_feature = self.__extract_stft(frame_stack, samplerate)
         elif self.voice_feature_ == "gccphat":
             sound_feature = self.__extract_gccphat(frame_stack, samplerate).flatten()
-        elif self.voice_feature_ == "autoencoder":
+        elif self.voice_feature_ == "enc":
             sound_feature = self.__encode_voice(frame_stack).flatten()
 
         src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
@@ -132,8 +132,7 @@ class Pipeline(object):
             if torch.cuda.is_available():
                 frames = frames.cuda()
 
-            mu, logvar = self.voice_encoder_.encode(frames)
-            code = self.voice_encoder_.reparametrize(mu, logvar)
+            code = self.voice_encoder_.encode(frames)
 
             # convert code to numpy.ndarray (n_feature, )
             if torch.cuda.is_available():
@@ -153,7 +152,7 @@ class Pipeline(object):
         try:
             assert(self.voice_encoder_ is not None)
         except:
-            print("[ERROR] Pipeline.autoencode_data(): must initialize voice_encoder first")
+            print("[ERROR] Pipeline.__check_autoencoder(): must initialize voice_encoder first")
             raise
 
 
