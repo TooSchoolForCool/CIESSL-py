@@ -68,12 +68,12 @@ class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
 
-        self.fc1 = nn.Linear(18000, 1000)
-        self.fc21 = nn.Linear(1000, 200)
-        self.fc22 = nn.Linear(1000, 200)
+        self.fc1 = nn.Linear(18000, 3000)
+        self.fc21 = nn.Linear(3000, 200)
+        self.fc22 = nn.Linear(3000, 200)
 
-        self.fc3 = nn.Linear(200, 1000)
-        self.fc4 = nn.Linear(1000, 18000)
+        self.fc3 = nn.Linear(200, 3000)
+        self.fc4 = nn.Linear(3000, 18000)
 
 
     def encode(self, x):
@@ -99,7 +99,24 @@ class VAE(nn.Module):
     def forward(self, x):
         mu, logvar = self.encode(x)
         z = self.reparametrize(mu, logvar)
-        return self.decode(z), mu, logvar        
+        return self.decode(z), mu, logvar
+
+
+    def loss(self, recon_x, x, mu, logvar):
+        """
+        Args:
+            recon_x: generating images
+            x: origin images
+            mu: latent mean
+            logvar: latent log variance
+        """
+        reconstruction_function = nn.MSELoss(size_average=False)
+        BCE = reconstruction_function(recon_x, x)  # mse loss
+        # loss = 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+        KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
+        KLD = torch.sum(KLD_element).mul_(-0.5)
+        # KL divergence
+        return BCE + KLD
 
 
     def save(self, out_path):
@@ -108,23 +125,6 @@ class VAE(nn.Module):
 
     def load(self, model_dir):
         self.load_state_dict( torch.load(model_dir) )
-
-
-def loss_func(recon_x, x, mu, logvar):
-    """
-    Args:
-        recon_x: generating images
-        x: origin images
-        mu: latent mean
-        logvar: latent log variance
-    """
-    reconstruction_function = nn.MSELoss(size_average=False)
-    BCE = reconstruction_function(recon_x, x)  # mse loss
-    # loss = 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-    KLD_element = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
-    KLD = torch.sum(KLD_element).mul_(-0.5)
-    # KL divergence
-    return BCE + KLD
 
 
 def test_autoencoder():
@@ -185,7 +185,7 @@ def test_vae():
 
     num_epochs = 100
     batch_size = 128
-    learning_rate = 1e-3
+    learning_rate = 1e-5
     n_frames = 18000
 
     model = VAE()
@@ -194,6 +194,7 @@ def test_vae():
         model.cuda()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    min_loss = 99999999.0
 
     for epoch in range(num_epochs):
         model.train()
@@ -212,9 +213,9 @@ def test_vae():
 
                 optimizer.zero_grad()
                 recon_batch, mu, logvar = model(frames)
-                loss = loss_func(recon_batch, frames, mu, logvar)
+                loss = model.loss(recon_batch, frames, mu, logvar)
                 loss.backward()
-                train_loss += float(loss.item())
+                train_loss += loss.item()
                 optimizer.step()
                 cnt += 1
 
@@ -224,7 +225,10 @@ def test_vae():
         print('====> Epoch: {} voice sample:{} Average loss: {:.4f}'.format(
             epoch, voice_cnt, 1.0 * train_loss / cnt))
 
-    model.save("voice_vae.model")
+        if min_loss < train_loss / cnt:
+            min_loss = float(train_loss / cnt)
+            print("model saved at: {}".format(voice_vae.model))
+            model.save("voice_vae.model")
 
 
 if __name__ == '__main__':
