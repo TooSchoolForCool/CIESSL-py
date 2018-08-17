@@ -5,7 +5,7 @@ from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-
+encoder_
 class VoiceEncoder(nn.Module):
     def __init__(self):
         super(VoiceEncoder, self).__init__()
@@ -15,9 +15,16 @@ class VoiceEncoder(nn.Module):
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1])
 
+    def encode(self, x):
+        return self.encoder_(x)
+
+
+    def decode(self, z):
+        return self.decoder_(z)
+
 
     def forward(self, x):
-        code = self.encoder_(x)
+        code = self.(x)
         out = self.decoder_(code)
         return out
 
@@ -66,12 +73,12 @@ class VoiceVAE(nn.Module):
     def __init__(self):
         super(VoiceVAE, self).__init__()
 
-        self.fc1 = nn.Linear(18000, 3000)
-        self.fc21 = nn.Linear(3000, 200)
-        self.fc22 = nn.Linear(3000, 200)
+        self.fc1 = nn.Linear(18000, 1800)
+        self.fc21 = nn.Linear(1800, 200)
+        self.fc22 = nn.Linear(1800, 200)
 
-        self.fc3 = nn.Linear(200, 3000)
-        self.fc4 = nn.Linear(3000, 18000)
+        self.fc3 = nn.Linear(200, 1800)
+        self.fc4 = nn.Linear(1800, 18000)
 
 
     def encode(self, x):
@@ -91,7 +98,7 @@ class VoiceVAE(nn.Module):
 
     def decode(self, z):
         h3 = F.relu(self.fc3(z))
-        return torch.sigmoid( self.fc4(h3) )
+        return nn.Tanh( self.fc4(h3) )
 
 
     def forward(self, x):
