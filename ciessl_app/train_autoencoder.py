@@ -2,9 +2,11 @@ import os
 import argparse
 
 import torch
+from torch.autograd import Variable
 
 from model.autoencoder import VoiceVAE
 from model.data_loader import DataLoader
+
 
 def arg_parser():
     """Argument Parser
