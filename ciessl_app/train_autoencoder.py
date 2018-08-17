@@ -117,7 +117,7 @@ def train_simple_voice_enc(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
 
     num_epochs = 100
     batch_size = 128
-    learning_rate = 1e-3
+    learning_rate = 1e-5
     n_frames = 18000
 
     model = VoiceEncoder()

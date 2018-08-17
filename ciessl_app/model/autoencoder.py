@@ -10,7 +10,7 @@ class VoiceEncoder(nn.Module):
     def __init__(self):
         super(VoiceEncoder, self).__init__()
 
-        nn_structure = [18000, 9000, 3000, 300]
+        nn_structure = [18000, 3000, 300]
 
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1])
@@ -56,7 +56,10 @@ class VoiceEncoder(nn.Module):
 
 
     def load(self, model_dir):
-        self.load_state_dict( torch.load(model_dir) )
+        if torch.cuda.is_available():
+            self.load_state_dict( torch.load(model_dir) )
+        else:
+            self.load_state_dict( torch.load(model_dir, map_location="cpu") )
 
 
 class VoiceVAE(nn.Module):
