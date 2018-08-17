@@ -9,6 +9,7 @@ from model.data_loader import DataLoader
 from model.ranksvm import RankSVM
 from model.pipeline import Pipeline
 from model.evaluator import Evaluator
+from model.autoencoder import VoiceVAE
 
 
 def arg_parser():
@@ -22,15 +23,15 @@ def arg_parser():
     parser = argparse.ArgumentParser(prog='voice preprocessing')
 
     parser.add_argument(
-        "--voice",
-        dest="voice",
+        "--voice_data",
+        dest="voice_data",
         type=str,
         required=True,
         help="Input voice data directory"
     )
     parser.add_argument(
-        "--map",
-        dest="map",
+        "--map_data",
+        dest="map_data",
         type=str,
         required=True,
         help="Input map data directory"
@@ -47,28 +48,87 @@ def arg_parser():
         dest="mode",
         type=str,
         required=True,
-        help="choose learning mode: classification / regression"
+        help="choose learning mode: clf / reg"
     )
-    
+    parser.add_argument(
+        "--voice_feature",
+        dest="voice_feature",
+        type=str,
+        required=True,
+        help="voice feature"
+    )
+    parser.add_argument(
+        "--map_feature",
+        dest="map_feature",
+        type=str,
+        # required=True,
+        help="map feature"
+    )
+    parser.add_argument(
+        "--voice_encoder",
+        dest="voice_encoder",
+        type=str,
+        help="Model directory for voice encoder"
+    )
+
     args = parser.parse_args()
+
+    # Validation
+    if args.voice_feature == "autoencoder":
+        try:
+            assert(args.voice_encoder is not None)
+        except:
+            print("[ERROR] train: Must specify model path when using autoencoder for" 
+                + " extracting voice feature")
+            raise
 
     return args
 
 
-def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir):
+def init_pipeline(voice_feature, map_feature, voice_encoder_path):
+    n_frames=18000
+    sound_fading_rate=0.999
+    mic_fading_rate=0.993
+    gccphat_size=15
+
+    voice_enc = None
+
+    if voice_feature == "autoencoder":
+        voice_enc = VoiceVAE()
+        voice_enc.load(voice_encoder_path)
+
+    pipe = Pipeline(
+        n_frames=n_frames,
+        sound_fading_rate=sound_fading_rate,
+        mic_fading_rate=mic_fading_rate,
+        voice_feature=voice_feature,
+        gccphat_size=gccphat_size,
+        map_feature=map_feature,
+        voice_encoder=voice_enc
+    )
+
+    return pipe
+
+
+def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
+    map_feature, voice_encoder_path):
+    """
+    Treat the task as a classification problem.
+    """
+
     # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     rank_svm = MLPClassifier(solver="adam")
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
 
-    pipe = Pipeline(n_frames=18000, sound_fading_rate=0.999, mic_fading_rate=0.993)
+    pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     # preparing init training set
     init_training_X = None
     init_training_y = None
     for voice in dl.voice_data_iterator(n_samples=5, seed=0):
-        X, y = pipe.prepare_training_data(map_data, voice, voice_feature="gccphat")
+        X, y = pipe.prepare_training_data(map_data, voice)
         if init_training_X is None:
             init_training_X = X
             init_training_y = y
@@ -83,9 +143,9 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir):
     evaluator = Evaluator(map_data["n_room"])
     for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
-        X, y = pipe.prepare_training_data(map_data, voice, voice_feature="gccphat") 
+        X, y = pipe.prepare_training_data(map_data, voice) 
         predicted_y = rank_svm.predict_proba(X)
-
+        
         evaluator.evaluate(y, predicted_y)
 
         print("Sample %d" % cnt)
@@ -99,15 +159,16 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir):
     evaluator.plot_acc_history()
 
 
-def train_model(voice_data_dir, map_data_dir, pos_tf_dir, mode):
-    if mode == "clf":
-        classification_mode(voice_data_dir, map_data_dir, pos_tf_dir)
-    elif mode == "reg":
+def train_model():
+    args = arg_parser()
+
+    if args.mode == "clf":
+        classification_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
+            pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
+            voice_encoder_path=args.voice_encoder)
+    elif args.mode == "reg":
         pass
 
 
 if __name__ == '__main__':
-    args = arg_parser()
-    
-    train_model(voice_data_dir=args.voice, map_data_dir=args.map, pos_tf_dir=args.config,
-        mode=args.mode)
+    train_model()

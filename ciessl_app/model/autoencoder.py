@@ -124,7 +124,10 @@ class VoiceVAE(nn.Module):
 
 
     def load(self, model_dir):
-        self.load_state_dict( torch.load(model_dir) )
+        if torch.cuda.is_available():
+            self.load_state_dict( torch.load(model_dir) )
+        else:
+            self.load_state_dict( torch.load(model_dir, map_location="cpu") )
 
 
 def test_autoencoder():

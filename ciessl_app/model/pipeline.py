@@ -4,6 +4,9 @@ import json
 import Queue
 
 import numpy as np
+import torch
+from torch.autograd import Variable
+
 from voice_engine.signal_process import stft, gcc_phat
 from voice_engine.utils import view_spectrum, view_gccphat
 
@@ -17,7 +20,7 @@ class Pipeline(object):
     into learning model.
     """
     def __init__(self, n_frames=18000, sound_fading_rate=0.998, mic_fading_rate=0.998,
-        gccphat_size=15):
+        gccphat_size=15, voice_feature="gccphat", map_feature=None, voice_encoder=None):
         """
         Constructor
 
@@ -32,10 +35,13 @@ class Pipeline(object):
         self.sound_fading_rate_ = sound_fading_rate
         self.mic_fading_rate_ = mic_fading_rate
         self.gccphat_size_ = gccphat_size
+        self.voice_feature_ = voice_feature
+        self.map_feature_ = map_feature
+
+        self.voice_encoder_ = voice_encoder
 
 
-    def prepare_training_data(self, map_data, voice_data, voice_feature="stft", 
-        map_feature="flooding_map"):
+    def prepare_training_data(self, map_data, voice_data):
         """
         This function is used to prepare training data, which acquiring map and voice 
         data from DataLoader, and return corresponding feature vectors and lebals.
@@ -68,10 +74,12 @@ class Pipeline(object):
         samplerate = voice_data["samplerate"]
         sound_feature = None
         
-        if voice_feature == "stft":
+        if self.voice_feature_ == "stft":
             sound_feature = self.__extract_stft(frame_stack, samplerate)
-        elif voice_feature == "gccphat":
+        elif self.voice_feature_ == "gccphat":
             sound_feature = self.__extract_gccphat(frame_stack, samplerate).flatten()
+        elif self.voice_feature_ == "autoencoder":
+            sound_feature = self.__encode_voice(frame_stack).flatten()
 
         src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
         
@@ -102,8 +110,51 @@ class Pipeline(object):
         return X, y
 
 
-    def prepare_inference_data(self):
-        pass
+    def __encode_voice(self, frame_stack):
+        """
+        Calculate gccphat pattern
+
+        Args:
+            frame_stack (np.ndarray (n_samples, n_chennals)): Audio frame stack
+            samplerate (int): audio source sample rate
+
+        Returns:
+            gccphat_pattern (np.ndarray (gccphat_size, n_pairs)): gcc_phat pattern feature
+        """
+        self.__check_autoencoder()
+
+        # encode voice data
+        voice_code = []
+
+        for i in range(0, frame_stack.shape[1]):
+            frames = torch.Tensor(frame_stack[:self.n_frames_, i])
+            frames = Variable(frames)
+            if torch.cuda.is_available():
+                frames = frames.cuda()
+
+            mu, logvar = self.voice_encoder_.encode(frames)
+            code = self.voice_encoder_.reparametrize(mu, logvar)
+
+            # convert code to numpy.ndarray (n_feature, )
+            if torch.cuda.is_available():
+                code = code.data.cpu().numpy()
+            else:
+                code = code.data.numpy()
+
+            voice_code.append(code)
+
+        # convert voice_code to numpy.ndarray (n_features, n_channels)
+        voice_code = np.asarray(voice_code).T
+
+        return voice_code
+
+    
+    def __check_autoencoder(self):
+        try:
+            assert(self.voice_encoder_ is not None)
+        except:
+            print("[ERROR] Pipeline.autoencode_data(): must initialize voice_encoder first")
+            raise
 
 
     def __product_mask(self, ma, mb):

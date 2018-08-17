@@ -17,8 +17,9 @@ voice_preprocess:
 
 train_autoencoder:
 	python ciessl_app/train_autoencoder.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json" \
-		--config="ciessl_app/config/bh9f_pos_tf.json" --encoder="voice_vae" --out="voice_vae.model"
+		--config="ciessl_app/config/bh9f_pos_tf.json" --encoder="simple" --out="voice_simple_enc.model"
 
 train:
-	python ciessl_app/train.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json" \
-		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf"
+	python ciessl_app/train.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \
+		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf" --voice_feature="autoencoder" \
+		--voice_encoder="data/model/voice_vae.model"
