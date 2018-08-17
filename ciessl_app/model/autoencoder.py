@@ -156,8 +156,9 @@ def test_autoencoder():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     for epoch in range(num_epochs):
-        for voice in dl.voice_data_iterator(n_samples=1, seed=1):
+        for voice in dl.voice_data_iterator(seed=1):
             voice_frames = voice["frames"]
+            cnt = 0
             for i in range(0, voice_frames.shape[1]):
                 frames = torch.Tensor(voice_frames[:n_frames, i])
                 frames = Variable(frames)
@@ -170,9 +171,11 @@ def test_autoencoder():
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                print("channel {} opt".format(i + 1))
+
+            cnt += 1
+
         # ===================log========================
-        print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, loss.data[0]))
+        print('epoch [{}/{}], voice sample:{} loss:{:.4f}'.format(epoch + 1, num_epochs, cnt, loss.data[0]))
 
     model.save("voice_autoencoder.model")
 
@@ -201,7 +204,7 @@ def test_vae():
         model.train()
         train_loss = 0
         cnt = 0
-        for voice in dl.voice_data_iterator(n_samples=1, seed=1):
+        for voice in dl.voice_data_iterator(seed=1):
             voice_frames = voice["frames"]
             for i in range(0, voice_frames.shape[1]):
                 frames = torch.Tensor(voice_frames[:n_frames, i])
@@ -215,15 +218,14 @@ def test_vae():
                 loss.backward()
                 train_loss += loss.item()
                 optimizer.step()
-                cnt += 1
-                print("channel {}".format(cnt))
+            cnt += 1
 
-        print('====> Epoch: {} Average loss: {:.4f}'.format(
-            epoch, 1.0 * train_loss / cnt))
+        print('====> Epoch: {} voice sample:{} Average loss: {:.4f}'.format(
+            epoch, cnt, 1.0 * train_loss / cnt))
 
     model.save("voice_vae.model")
 
 
 if __name__ == '__main__':
-    # test_autoencoder()
-    test_vae()
+    test_autoencoder()
+    # test_vae()
