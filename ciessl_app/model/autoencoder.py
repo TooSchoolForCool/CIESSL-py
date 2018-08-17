@@ -5,12 +5,12 @@ from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-encoder_
+
 class VoiceEncoder(nn.Module):
     def __init__(self):
         super(VoiceEncoder, self).__init__()
 
-        nn_structure = [18000, 3000, 300]
+        nn_structure = [18000, 1800, 200]
 
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1])
@@ -24,8 +24,8 @@ class VoiceEncoder(nn.Module):
 
 
     def forward(self, x):
-        code = self.(x)
-        out = self.decoder_(code)
+        code = self.encode(x)
+        out = self.decode(code)
         return out
 
 
