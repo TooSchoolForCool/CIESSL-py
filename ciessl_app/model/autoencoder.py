@@ -6,16 +6,11 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 
-class AutoEncoder(nn.Module):
-    def __init__(self, nn_structure):
-        super(AutoEncoder, self).__init__()
+class VoiceEncoder(nn.Module):
+    def __init__(self):
+        super(VoiceEncoder, self).__init__()
 
-        try:
-            assert(len(nn_structure) > 1)
-        except:
-            print("[ERROR] AutoEncoder.__init__(): nn_structure size must be greater than 1, " 
-                + "current length is {}".format(len(nn_structure)))
-            raise
+        nn_structure = [18000, 9000, 3000, 300]
 
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1])
@@ -142,9 +137,8 @@ def test_autoencoder():
     batch_size = 128
     learning_rate = 1e-3
     n_frames = 18000
-    nn_structure = [18000, 9000, 3000, 300]
 
-    model = AutoEncoder(nn_structure=nn_structure)
+    model = VoiceEncoder()
 
     if torch.cuda.is_available():
         print("[INFO] CUDA is available")
