@@ -68,20 +68,17 @@ class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
 
-        self.fc1 = nn.Linear(18000, 9000)
-        self.fc2 = nn.Linear(9000, 3000)
-        self.fc31 = nn.Linear(3000, 300)
-        self.fc32 = nn.Linear(3000, 300)
+        self.fc1 = nn.Linear(18000, 1800)
+        self.fc21 = nn.Linear(1800, 200)
+        self.fc22 = nn.Linear(1800, 200)
 
-        self.fc4 = nn.Linear(300, 3000)
-        self.fc5 = nn.Linear(3000, 9000)
-        self.fc6 = nn.Linear(9000, 18000)
+        self.fc3 = nn.Linear(200, 1800)
+        self.fc4 = nn.Linear(1800, 18000)
 
 
     def encode(self, x):
         h1 = F.relu(self.fc1(x))
-        h2 = F.relu(self.fc2(h1))
-        return self.fc31(h2), self.fc32(h2)
+        return self.fc21(h1), self.fc22(h1)
 
 
     def reparametrize(self, mu, logvar):
@@ -95,10 +92,8 @@ class VAE(nn.Module):
 
 
     def decode(self, z):
-        h4 = F.relu(self.fc4(z))
-        h5 = F.relu(self.fc5(h4))
-
-        return torch.sigmoid( self.fc6(h5) )
+        h3 = F.relu(self.fc3(z))
+        return torch.sigmoid( self.fc4(h3) )
 
 
     def forward(self, x):
@@ -203,9 +198,12 @@ def test_vae():
     for epoch in range(num_epochs):
         model.train()
         train_loss = 0
+        voice_cnt = 0
         cnt = 0
+
         for voice in dl.voice_data_iterator(seed=1):
             voice_frames = voice["frames"]
+
             for i in range(0, voice_frames.shape[1]):
                 frames = torch.Tensor(voice_frames[:n_frames, i])
                 frames = Variable(frames)
@@ -218,10 +216,13 @@ def test_vae():
                 loss.backward()
                 train_loss += loss.item()
                 optimizer.step()
-            cnt += 1
+                cnt += 1
 
+            voice_cnt += 1
+            print('voice sample:{} Average loss: {:.4f}'.format(voice_cnt, 1.0 * train_loss / cnt))
+        
         print('====> Epoch: {} voice sample:{} Average loss: {:.4f}'.format(
-            epoch, cnt, 1.0 * train_loss / cnt))
+            epoch, voice_cnt, 1.0 * train_loss / cnt))
 
     model.save("voice_vae.model")
 
