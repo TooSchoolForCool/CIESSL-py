@@ -56,6 +56,14 @@ class AutoEncoder(nn.Module):
         self.decoder_ = nn.Sequential(*net)
 
 
+    def save(self, out_path):
+        torch.save(self.state_dict(), out_path)
+
+
+    def load(self, model_dir):
+        self.load_state_dict( torch.load(model_dir) )
+
+
 class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
@@ -116,6 +124,14 @@ class VAE(nn.Module):
         return BCE + KLD
 
 
+    def save(self, out_path):
+        torch.save(self.state_dict(), out_path)
+
+
+    def load(self, model_dir):
+        self.load_state_dict( torch.load(model_dir) )
+
+
 def test_autoencoder():
     from data_loader import DataLoader
 
@@ -158,7 +174,7 @@ def test_autoencoder():
         # ===================log========================
         print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, num_epochs, loss.data[0]))
 
-    torch.save(model.state_dict(), './voice_autoencoder.pth')
+    model.save("voice_autoencoder.model")
 
 
 def test_vae():
@@ -205,7 +221,7 @@ def test_vae():
         print('====> Epoch: {} Average loss: {:.4f}'.format(
             epoch, 1.0 * train_loss / cnt))
 
-    torch.save(model.state_dict(), './voice_vae.pth')
+    model.save("voice_vae.model")
 
 
 if __name__ == '__main__':
