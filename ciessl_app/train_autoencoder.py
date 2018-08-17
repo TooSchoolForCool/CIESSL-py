@@ -4,7 +4,7 @@ import argparse
 import torch
 
 from model.autoencoder import VoiceVAE
-from data_loader import DataLoader
+from model.data_loader import DataLoader
 
 def arg_parser():
     """Argument Parser
