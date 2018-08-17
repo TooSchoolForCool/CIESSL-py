@@ -64,9 +64,9 @@ class AutoEncoder(nn.Module):
         self.load_state_dict( torch.load(model_dir) )
 
 
-class VAE(nn.Module):
+class VoiceVAE(nn.Module):
     def __init__(self):
-        super(VAE, self).__init__()
+        super(VoiceVAE, self).__init__()
 
         self.fc1 = nn.Linear(18000, 3000)
         self.fc21 = nn.Linear(3000, 200)
@@ -188,7 +188,7 @@ def test_vae():
     learning_rate = 1e-5
     n_frames = 18000
 
-    model = VAE()
+    model = VoiceVAE()
     if torch.cuda.is_available():
         print("[INFO] CUDA is available")
         model.cuda()
@@ -232,5 +232,5 @@ def test_vae():
 
 
 if __name__ == '__main__':
-    test_autoencoder()
-    # test_vae()
+    # test_autoencoder()
+    test_vae()

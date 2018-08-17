@@ -15,6 +15,10 @@ voice_preprocess:
 	python ciessl_app/tools/voice_preprocess.py --data_in="data/raw_voice" --data_out="data/active_voice" \
 		--chunk_interval=20 --mode=3
 
+train_autoencoder:
+	python ciessl_app/train_autoencoder.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json" \
+		--config="ciessl_app/config/bh9f_pos_tf.json" --encoder="voice_vae" --out="voice_vae.model"
+
 train:
 	python ciessl_app/train.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf"
