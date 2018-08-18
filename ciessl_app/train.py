@@ -9,7 +9,7 @@ from model.data_loader import DataLoader
 from model.ranksvm import RankSVM
 from model.pipeline import Pipeline
 from model.evaluator import Evaluator
-from model.autoencoder import VoiceVAE
+from model.autoencoder import VoiceVAE, VoiceEncoder
 
 
 def arg_parser():
@@ -48,14 +48,14 @@ def arg_parser():
         dest="mode",
         type=str,
         required=True,
-        help="choose learning mode: clf / reg"
+        help="choose learning mode: [clf, reg]"
     )
     parser.add_argument(
         "--voice_feature",
         dest="voice_feature",
         type=str,
         required=True,
-        help="voice feature"
+        help="voice feature: [gccphat, stft, enc]"
     )
     parser.add_argument(
         "--map_feature",
@@ -74,7 +74,7 @@ def arg_parser():
     args = parser.parse_args()
 
     # Validation
-    if args.voice_feature == "autoencoder":
+    if args.voice_feature == "enc":
         try:
             assert(args.voice_encoder is not None)
         except:
@@ -93,7 +93,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
 
     voice_enc = None
 
-    if voice_feature == "autoencoder":
+    if voice_feature == "enc":
         voice_enc = VoiceVAE()
         voice_enc.load(voice_encoder_path)
 

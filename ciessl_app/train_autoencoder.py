@@ -53,10 +53,16 @@ def arg_parser():
         dest="encoder",
         type=str,
         required=True,
-        help="choose what type of encoder to train"
+        help="choose what type of encoder to train: [voice_vae, voice_simple]"
     )
     
     args = parser.parse_args()
+
+    # check validation
+    valid_encoder = ["voice_vae", "voice_simple"]
+    if args.encoder not in valid_encoder:
+        print("[ERROR] train_autoencoder: --encoder should in {}".format(valid_encoder))
+        raise
 
     return args
 
@@ -173,7 +179,7 @@ def main():
     if args.encoder == "voice_vae":
         train_voice_vae(voice_data_dir=args.voice, map_data_dir=args.map, 
             pos_tf_dir=args.config, out_path=args.out)
-    elif args.encoder == "simple":
+    elif args.encoder == "voice_simple":
         train_simple_voice_enc(voice_data_dir=args.voice, map_data_dir=args.map, 
             pos_tf_dir=args.config, out_path=args.out)
     else:
