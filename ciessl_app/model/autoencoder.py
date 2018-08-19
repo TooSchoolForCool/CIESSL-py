@@ -15,6 +15,7 @@ class VoiceEncoder(nn.Module):
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1])
 
+
     def encode(self, x):
         return self.encoder_(x)
 
@@ -73,12 +74,14 @@ class VoiceVAE(nn.Module):
     def __init__(self):
         super(VoiceVAE, self).__init__()
 
-        self.fc1 = nn.Linear(18000, 1800)
-        self.fc21 = nn.Linear(1800, 200)
-        self.fc22 = nn.Linear(1800, 200)
+        input_size = 12000 * 16
 
-        self.fc3 = nn.Linear(200, 1800)
-        self.fc4 = nn.Linear(1800, 18000)
+        self.fc1 = nn.Linear(input_size, 1000)
+        self.fc21 = nn.Linear(1000, 200)
+        self.fc22 = nn.Linear(1000, 200)
+
+        self.fc3 = nn.Linear(200, 1000)
+        self.fc4 = nn.Linear(1000, input_size)
 
 
     def encode(self, x):

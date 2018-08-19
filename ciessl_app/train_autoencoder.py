@@ -27,6 +27,7 @@ def arg_parser():
         required=True,
         help="Input voice data directory"
     )
+
     parser.add_argument(
         "--map",
         dest="map",
@@ -34,6 +35,7 @@ def arg_parser():
         required=True,
         help="Input map data directory"
     )
+
     parser.add_argument(
         "--config",
         dest="config",
@@ -41,6 +43,7 @@ def arg_parser():
         required=True,
         help="Training set configuration file directory"
     )
+
     parser.add_argument(
         "--out",
         dest="out",
@@ -48,18 +51,19 @@ def arg_parser():
         required=True,
         help="output directory"
     )
+
+    valid_encoder = ["voice_vae", "voice_simple", "all_ch_vae"]
     parser.add_argument(
         "--encoder",
         dest="encoder",
         type=str,
         required=True,
-        help="choose what type of encoder to train: [voice_vae, voice_simple]"
+        help="choose what type of encoder to train: %r" % valid_encoder
     )
     
     args = parser.parse_args()
 
     # check validation
-    valid_encoder = ["voice_vae", "voice_simple"]
     if args.encoder not in valid_encoder:
         print("[ERROR] train_autoencoder: --encoder should in {}".format(valid_encoder))
         raise
@@ -171,7 +175,57 @@ def train_simple_voice_enc(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
             min_loss = float(1.0 * train_loss / cnt)
             print("model saved at: {}".format(out_path))
             model.save(out_path)
-    
+
+
+def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
+    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir)
+
+    num_epochs = 100
+    batch_size = 128
+    learning_rate = 1e-5
+    n_frames = 12000
+
+    model = VoiceVAE()
+    if torch.cuda.is_available():
+        print("[INFO] CUDA is available")
+        model.cuda()
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    min_loss = 99999999.0
+
+    model.train()
+    for epoch in range(num_epochs):
+        train_loss = 0.0
+        voice_cnt = 0
+
+        for voice in dl.voice_data_iterator(seed=1):
+            # construct training data 1D array [ch1_sig, ch2_sig, ...]
+            frames = voice["frames"].T  # frames (n_channels, n_samples)
+            frames = frames[:, :n_frames].flatten()
+            frames = torch.Tensor(frames)
+            frames = Variable(frames)
+            if torch.cuda.is_available():
+                frames = frames.cuda()
+
+            optimizer.zero_grad()
+            recon_batch, mu, logvar = model(frames)
+            loss = model.loss(recon_batch, frames, mu, logvar)
+            loss.backward()
+            train_loss += loss.item()
+            optimizer.step()
+
+            voice_cnt += 1
+            print('voice sample:{} Average loss: {:.4f}'.format(voice_cnt, 1.0 * train_loss / voice_cnt))
+        
+        print('====> Epoch: {} voice sample:{} Average loss: {:.4f}'.format(
+            epoch, voice_cnt, 1.0 * train_loss / voice_cnt))
+
+        if min_loss > train_loss / voice_cnt:
+            min_loss = float(1.0 * train_loss / voice_cnt)
+            print("model saved at: {}".format(out_path))
+            model.save(out_path)
+
+  
 
 def main():
     args = arg_parser()
@@ -181,6 +235,9 @@ def main():
             pos_tf_dir=args.config, out_path=args.out)
     elif args.encoder == "voice_simple":
         train_simple_voice_enc(voice_data_dir=args.voice, map_data_dir=args.map, 
+            pos_tf_dir=args.config, out_path=args.out)
+    elif args.encoder == "all_ch_vae":
+        train_all_ch_vae(voice_data_dir=args.voice, map_data_dir=args.map, 
             pos_tf_dir=args.config, out_path=args.out)
     else:
         print("[ERROR] main(): no such encoder {}".format(args.encoder))
