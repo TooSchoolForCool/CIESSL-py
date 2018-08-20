@@ -207,10 +207,11 @@ def train_simple_voice_enc(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
 def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
     dl = BatchLoader(voice_data_dir, map_data_dir, pos_tf_dir)
 
-    num_epochs = 1000
+    num_epochs = 50000
     batch_size = 8
     learning_rate = 1e-5
     n_frames = 8000
+    save_frequency = 500
 
     model = VoiceVAE()
     if torch.cuda.is_available():
@@ -221,6 +222,7 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
     min_loss = 99999999.0
 
     model.train()
+    model.load("all_ch_vae.model")
     for epoch in range(num_epochs):
         train_loss = 0.0
         cnt = 0
@@ -241,10 +243,10 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
             cnt += 1
             # print('voice sample:{} Average loss: {:.4f}'.format(cnt, 1.0 * train_loss / cnt))
 
-        print('====> Epoch: {} voice sample:{} Average loss: {:.4f}'.format(
-            epoch, cnt, 1.0 * train_loss / cnt))
+        print('====> Epoch: {} Average loss: {:.4f}'.format(
+            epoch, 1.0 * train_loss / cnt))
 
-        if min_loss > train_loss / cnt:
+        if epoch % save_frequency == 0 and min_loss > train_loss / cnt:
             min_loss = float(1.0 * train_loss / cnt)
             print("model saved at: {}".format(out_path))
             model.save(out_path)
