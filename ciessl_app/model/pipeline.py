@@ -79,7 +79,7 @@ class Pipeline(object):
         elif self.voice_feature_ == "gccphat":
             sound_feature = self.__extract_gccphat(frame_stack, samplerate).flatten()
         elif self.voice_feature_ == "enc":
-            sound_feature = self.__encode_voice(frame_stack).flatten()
+            sound_feature = self.__encode_voice(frame_stack)
 
         src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
         
@@ -126,24 +126,26 @@ class Pipeline(object):
         # encode voice data
         voice_code = []
 
-        for i in range(0, frame_stack.shape[1]):
-            frames = torch.Tensor(frame_stack[:self.n_frames_, i])
-            frames = Variable(frames)
-            if torch.cuda.is_available():
-                frames = frames.cuda()
+        frames = frame_stack.T  # frames (n_channels, n_samples)
+        frames = frames[:, :self.n_frames_].flatten()
+        frames = torch.Tensor(frames)
+        frames = Variable(frames)
+        if torch.cuda.is_available():
+            print("convert to cuda")
+            frames = frames.cuda()
 
-            code = self.voice_encoder_.encode(frames)
+        code = self.voice_encoder_.encode(frames)
 
-            # convert code to numpy.ndarray (n_feature, )
-            if torch.cuda.is_available():
-                code = code.data.cpu().numpy()
-            else:
-                code = code.data.numpy()
+        # convert code to numpy.ndarray (n_feature, )
+        if torch.cuda.is_available():
+            code = code.data.cpu().numpy()
+        else:
+            code = code.data.numpy()
 
-            voice_code.append(code)
-
-        # convert voice_code to numpy.ndarray (n_features, n_channels)
-        voice_code = np.asarray(voice_code).T
+        voice_code = code
+        # voice_code.append(code)
+        # # convert voice_code to numpy.ndarray (n_features, n_channels)
+        # voice_code = np.asarray(voice_code).T
 
         return voice_code
 

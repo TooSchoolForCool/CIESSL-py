@@ -180,10 +180,10 @@ def train_simple_voice_enc(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
 def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir)
 
-    num_epochs = 100
+    num_epochs = 1000
     batch_size = 128
     learning_rate = 1e-5
-    n_frames = 12000
+    n_frames = 8000
 
     model = VoiceVAE()
     if torch.cuda.is_available():
@@ -215,8 +215,8 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
             optimizer.step()
 
             voice_cnt += 1
-            print('voice sample:{} Average loss: {:.4f}'.format(voice_cnt, 1.0 * train_loss / voice_cnt))
-        
+            # print('voice sample:{} Average loss: {:.4f}'.format(voice_cnt, 1.0 * train_loss / voice_cnt))
+            
         print('====> Epoch: {} voice sample:{} Average loss: {:.4f}'.format(
             epoch, voice_cnt, 1.0 * train_loss / voice_cnt))
 

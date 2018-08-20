@@ -65,6 +65,7 @@ class VoiceEncoder(nn.Module):
 
     def load(self, model_dir):
         if torch.cuda.is_available():
+            super(VoiceEncoder, self).cuda()
             self.load_state_dict( torch.load(model_dir) )
         else:
             self.load_state_dict( torch.load(model_dir, map_location="cpu") )
@@ -74,7 +75,7 @@ class VoiceVAE(nn.Module):
     def __init__(self):
         super(VoiceVAE, self).__init__()
 
-        input_size = 12000 * 16
+        input_size = 8000 * 16
 
         self.fc1 = nn.Linear(input_size, 1000)
         self.fc21 = nn.Linear(1000, 200)
@@ -146,7 +147,9 @@ class VoiceVAE(nn.Module):
 
     def load(self, model_dir):
         if torch.cuda.is_available():
+            super(VoiceVAE, self).cuda()
             self.load_state_dict( torch.load(model_dir) )
+            print("Load GPU Model")
         else:
             self.load_state_dict( torch.load(model_dir, map_location="cpu") )
 

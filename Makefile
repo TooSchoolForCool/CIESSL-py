@@ -22,4 +22,4 @@ train_autoencoder:
 train:
 	python ciessl_app/train.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf" --voice_feature="enc" \
-		--voice_encoder="data/model/voice_vae.model"
+		--voice_encoder="data/model/all_ch_vae.model"
