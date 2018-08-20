@@ -209,9 +209,9 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
 
     num_epochs = 50000
     batch_size = 8
-    learning_rate = 1e-5
-    n_frames = 8000
-    save_frequency = 500
+    learning_rate = 1e-4
+    n_frames = 6000
+    save_frequency = 200
 
     model = VoiceVAE()
     if torch.cuda.is_available():

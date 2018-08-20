@@ -75,7 +75,7 @@ class VoiceVAE(nn.Module):
     def __init__(self):
         super(VoiceVAE, self).__init__()
 
-        input_size = 8000 * 16
+        input_size = 6000 * 16
 
         self.fc1 = nn.Linear(input_size, 1000)
         self.fc21 = nn.Linear(1000, 200)
