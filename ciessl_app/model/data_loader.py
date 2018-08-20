@@ -13,7 +13,7 @@ class DataLoader(object):
     """
     Handle data loading and parsing.
     """
-    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir, verbose=False):
+    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir, verbose=False, all_in=True):
         """
         Store voice dataset directory and map data directory
 
@@ -22,9 +22,14 @@ class DataLoader(object):
                 multiple sound track files (.wav) are stored
             map_data_dir (string): a specific file path to a .json file
                 which stores the map information
+            pos_tf_dir (string): directory of position tranform config file
+            verbose (bool): whether print out verbose info
+            all_in (bool): load whole dataset into memory at a time
         """
         # load all files' directories in voice_data_dir
         self.voice_file_dirs_ = []
+        self.dataset_ = None
+
         for file in os.listdir(voice_data_dir):
             if file.endswith(".pickle"):
                 self.voice_file_dirs_.append(os.path.join(voice_data_dir, file))
@@ -34,6 +39,9 @@ class DataLoader(object):
 
         if verbose:
             self.print_src_info()
+
+        if all_in:
+            self.load_whole_dataset()
 
 
     def save_segmented_map(self, output_path="segmented_map.png"):
@@ -101,7 +109,11 @@ class DataLoader(object):
         for i in idx[:n_samples]:
             # load voice pickle file
             # voice is store as a np.ndarray (frames, n_channels)
-            voice_frames = np.load(self.voice_file_dirs_[i])
+
+            if self.dataset_ is None:
+                voice_frames = np.load(self.voice_file_dirs_[i])
+            else:
+                voice_frames = self.dataset_[i]
 
             info = self.__parse_voice_filename(self.voice_file_dirs_[i])
 
@@ -231,6 +243,13 @@ class DataLoader(object):
             x = dst["x"] / self.resolution_ - self.real2simu_tf_[0] + self.origin_[0]
             y = dst["y"] / self.resolution_ - self.real2simu_tf_[1] + self.origin_[1]
             self.dst_pos_.append( (int(x), int(y)) )
+
+
+    def load_whole_dataset(self):
+        self.dataset_ = []
+        for file in self.voice_file_dirs_:
+            self.dataset_.append( np.load(file) )
+        print("[INFO] DataLoader.load_whole_dataset: load whole dataset into memory")
 
 
 def test():
