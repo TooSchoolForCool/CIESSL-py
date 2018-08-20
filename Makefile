@@ -23,3 +23,7 @@ train:
 	python ciessl_app/train.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf" --voice_feature="enc" \
 		--voice_encoder="data/model/all_ch_vae.model"
+
+cmp_enc:
+	python ciessl_app/cmp_encode.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \
+		--config="ciessl_app/config/bh9f_pos_tf.json" --voice_encoder="data/model/all_ch_vae.model"
