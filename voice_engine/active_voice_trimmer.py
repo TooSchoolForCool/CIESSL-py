@@ -20,7 +20,7 @@ class ActiveVoiceTrimmer(object):
 
         # save a pre-defined length of audio_chunks, and append it to detected active voice
         if prefix_size is None:
-            prefix_size = int(0.1 / audio_source.get_chunk_interval())
+            prefix_size = int(0.08 / audio_source.get_chunk_interval())
 
         self.prefix_buffer_ = deque(maxlen=prefix_size)
 
