@@ -1,10 +1,13 @@
 import os
 import argparse
+import random
 
+import numpy as np
 import torch
 from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
+
 
 from model.autoencoder import VoiceVAE, VoiceEncoder
 from model.data_loader import DataLoader
@@ -69,6 +72,30 @@ def arg_parser():
         raise
 
     return args
+
+
+class BatchLoader(DataLoader):
+
+    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir):
+        super(BatchLoader, self).__init__(voice_data_dir, map_data_dir, pos_tf_dir)
+
+
+    def load_batch(self, batch_size, n_frames, suffle=True):
+        seed = random.randint(0, 2 ** 32 - 1) if suffle else 0
+        batch_data = []
+
+        for voice in super(BatchLoader, self).voice_data_iterator(seed=seed):
+            # construct training data 1D array [ch1_sig, ch2_sig, ...]
+            frames = voice["frames"].T  # frames (n_channels, n_samples)
+            frames = frames[:, :n_frames].flatten()
+            batch_data.append(frames)
+
+            if len(batch_data) == batch_size:
+                yield np.asarray(batch_data)
+                batch_data = []
+
+        if batch_data:
+            yield np.asarray(batch_data)
 
 
 def train_voice_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
@@ -178,10 +205,10 @@ def train_simple_voice_enc(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
 
 
 def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
-    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir)
+    dl = BatchLoader(voice_data_dir, map_data_dir, pos_tf_dir)
 
     num_epochs = 1000
-    batch_size = 128
+    batch_size = 8
     learning_rate = 1e-5
     n_frames = 8000
 
@@ -196,32 +223,29 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
     model.train()
     for epoch in range(num_epochs):
         train_loss = 0.0
-        voice_cnt = 0
+        cnt = 0
 
-        for voice in dl.voice_data_iterator(seed=1):
-            # construct training data 1D array [ch1_sig, ch2_sig, ...]
-            frames = voice["frames"].T  # frames (n_channels, n_samples)
-            frames = frames[:, :n_frames].flatten()
-            frames = torch.Tensor(frames)
-            frames = Variable(frames)
+        for data in dl.load_batch(batch_size=batch_size, n_frames=n_frames):
+            data = torch.Tensor(data)
+            data = Variable(data)
             if torch.cuda.is_available():
-                frames = frames.cuda()
+                data = data.cuda()
 
             optimizer.zero_grad()
-            recon_batch, mu, logvar = model(frames)
-            loss = model.loss(recon_batch, frames, mu, logvar)
+            recon_batch, mu, logvar = model(data)
+            loss = model.loss(recon_batch, data, mu, logvar)
             loss.backward()
             train_loss += loss.item()
             optimizer.step()
 
-            voice_cnt += 1
-            # print('voice sample:{} Average loss: {:.4f}'.format(voice_cnt, 1.0 * train_loss / voice_cnt))
-            
-        print('====> Epoch: {} voice sample:{} Average loss: {:.4f}'.format(
-            epoch, voice_cnt, 1.0 * train_loss / voice_cnt))
+            cnt += 1
+            # print('voice sample:{} Average loss: {:.4f}'.format(cnt, 1.0 * train_loss / cnt))
 
-        if min_loss > train_loss / voice_cnt:
-            min_loss = float(1.0 * train_loss / voice_cnt)
+        print('====> Epoch: {} voice sample:{} Average loss: {:.4f}'.format(
+            epoch, cnt, 1.0 * train_loss / cnt))
+
+        if min_loss > train_loss / cnt:
+            min_loss = float(1.0 * train_loss / cnt)
             print("model saved at: {}".format(out_path))
             model.save(out_path)
 

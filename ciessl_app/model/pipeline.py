@@ -131,7 +131,6 @@ class Pipeline(object):
         frames = torch.Tensor(frames)
         frames = Variable(frames)
         if torch.cuda.is_available():
-            print("convert to cuda")
             frames = frames.cuda()
 
         code = self.voice_encoder_.encode(frames)
