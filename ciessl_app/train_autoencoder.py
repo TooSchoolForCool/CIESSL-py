@@ -8,7 +8,6 @@ from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-
 from model.autoencoder import VoiceVAE, VoiceEncoder
 from model.data_loader import DataLoader
 
@@ -127,7 +126,8 @@ def train_voice_vae(voice_data_dir, out_path):
 
         if epoch % lr_decay_freq == 0 and epoch != 0:
             learning_rate *= 0.99
-            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+            for g in optimizer.param_groups:
+                g['lr'] = learning_rate
 
         for batch in bl.load_batch(batch_size=batch_size, suffle=True, flatten=True):
             data = torch.Tensor(batch)
@@ -142,12 +142,12 @@ def train_voice_vae(voice_data_dir, out_path):
             train_loss += loss.item()
             optimizer.step()
 
-        print('====> Epoch: {} Average loss: {:.6f} learning_rate: {:.7f}'.format(
+        print('====> Epoch: {}\tAverage loss: {:.6f}\tlearning_rate: {:.7f}'.format(
             epoch, train_loss / bl.size(), learning_rate))
 
         if epoch % save_frequency == 0 and min_loss > train_loss / bl.size():
             min_loss = train_loss / bl.size()
-            print("model saved at: {}".format(out_path))
+            print("***** model saved at: {}".format(out_path))
             model.save(out_path)
 
 

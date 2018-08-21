@@ -89,11 +89,11 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
     n_frames=6000
     sound_fading_rate=0.999
     mic_fading_rate=0.993
-    gccphat_size=15
+    gccphat_size=25
 
     voice_enc = None
 
-    if voice_feature == "enc":
+    if voice_feature in ["enc", "gcc_enc"]:
         voice_enc = VoiceVAE()
         voice_enc.load(voice_encoder_path)
 

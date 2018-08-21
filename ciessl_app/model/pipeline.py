@@ -81,6 +81,8 @@ class Pipeline(object):
             sound_feature = self.__extract_gccphat(frame_stack, samplerate).flatten()
         elif self.voice_feature_ == "enc":
             sound_feature = self.__encode_voice(frame_stack)
+        elif self.voice_feature_ == "gcc_enc":
+            sound_feature = self.__encode_gcc(frame_stack, samplerate)
 
         src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
         
@@ -156,6 +158,33 @@ class Pipeline(object):
         except:
             print("[ERROR] Pipeline.__check_autoencoder(): must initialize voice_encoder first")
             raise
+
+    def __encode_gcc(self, frame_stack, samplerate):
+        self.__check_autoencoder()
+
+        gccphat_pattern = self.__extract_gccphat(frame_stack, samplerate)
+        gccphat_pattern = gccphat_pattern.T.flatten()
+
+        gccphat_pattern = torch.Tensor(gccphat_pattern)
+        gccphat_pattern = Variable(gccphat_pattern)
+        if torch.cuda.is_available():
+            gccphat_pattern = gccphat_pattern.cuda()
+
+        code = self.voice_encoder_.encode(gccphat_pattern)
+
+        # convert code to numpy.ndarray (n_feature, )
+        if torch.cuda.is_available():
+            code = code.data.cpu().numpy()
+        else:
+            code = code.data.numpy()
+
+        voice_code = code
+        # voice_code.append(code)
+        # # convert voice_code to numpy.ndarray (n_features, n_channels)
+        # voice_code = np.asarray(voice_code).T
+
+        return voice_code
+
 
 
     def __product_mask(self, ma, mb):
