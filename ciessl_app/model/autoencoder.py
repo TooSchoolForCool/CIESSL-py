@@ -75,7 +75,7 @@ class VoiceVAE(nn.Module):
     def __init__(self):
         super(VoiceVAE, self).__init__()
 
-        nn_structure = [6000 * 16, 1000, 200, 15]
+        nn_structure = [6000, 2000, 500, 100]
 
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1]) # reverse the structure
