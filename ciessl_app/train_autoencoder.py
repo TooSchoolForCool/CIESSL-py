@@ -96,6 +96,7 @@ class BatchLoader(DataLoader):
             batch_data.append(data)
 
             if len(batch_data) == batch_size:
+                # (n_samples, n_features)
                 yield np.asarray(batch_data)
                 batch_data = []
 
@@ -109,6 +110,7 @@ def train_voice_vae(voice_data_dir, out_path):
     num_epochs = 50000
     batch_size = 8
     learning_rate = 1e-4
+    lr_decay_freq = 50
     save_frequency = 100
 
     model = VoiceVAE()
@@ -123,6 +125,10 @@ def train_voice_vae(voice_data_dir, out_path):
     for epoch in range(num_epochs):
         train_loss = 0.0
 
+        if epoch % lr_decay_freq == 0 and epoch != 0:
+            learning_rate *= 0.99
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
         for batch in bl.load_batch(batch_size=batch_size, suffle=True, flatten=True):
             data = torch.Tensor(batch)
             data = Variable(data)
@@ -136,7 +142,8 @@ def train_voice_vae(voice_data_dir, out_path):
             train_loss += loss.item()
             optimizer.step()
 
-        print('====> Epoch: {} Average loss: {:.6f}'.format(epoch, train_loss / bl.size()))
+        print('====> Epoch: {} Average loss: {:.6f} learning_rate: {:.7f}'.format(
+            epoch, train_loss / bl.size(), learning_rate))
 
         if min_loss > train_loss / bl.size():
             min_loss = train_loss / bl.size()
