@@ -5,6 +5,7 @@ import json
 
 import numpy as np
 import cv2
+from sklearn.preprocessing import normalize
 
 sys.path.append(os.path.abspath(os.path.join("..")))
 from utils import save_segmented_map
@@ -13,7 +14,8 @@ class DataLoader(object):
     """
     Handle data loading and parsing.
     """
-    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir, verbose=False, all_in=True):
+    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir, verbose=False, 
+        all_in=True, is_normalize=False):
         """
         Store voice dataset directory and map data directory
 
@@ -29,6 +31,7 @@ class DataLoader(object):
         # load all files' directories in voice_data_dir
         self.voice_file_dirs_ = []
         self.dataset_ = None
+        self.is_normalize_ = is_normalize
 
         for file in os.listdir(voice_data_dir):
             if file.endswith(".pickle"):
@@ -114,6 +117,8 @@ class DataLoader(object):
                 voice_frames = np.load(self.voice_file_dirs_[i])
             else:
                 voice_frames = self.dataset_[i]
+                if self.is_normalize_:
+                    voice_frames = normalize(voice_frames)
 
             info = self.__parse_voice_filename(self.voice_file_dirs_[i])
 
@@ -248,7 +253,11 @@ class DataLoader(object):
     def load_whole_dataset(self):
         self.dataset_ = []
         for file in self.voice_file_dirs_:
-            self.dataset_.append( np.load(file) )
+            data = np.load(file)
+            if self.is_normalize_:
+                data = normalize(data)
+
+            self.dataset_.append( data )
         print("[INFO] DataLoader.load_whole_dataset: load whole dataset into memory")
 
 

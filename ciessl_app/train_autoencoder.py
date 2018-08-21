@@ -55,7 +55,7 @@ def arg_parser():
         help="output directory"
     )
 
-    valid_encoder = ["voice_vae", "voice_simple", "all_ch_vae"]
+    valid_encoder = ["voice_vae", "voice_simple", "all_ch_vae", "all_ch_simple"]
     parser.add_argument(
         "--encoder",
         dest="encoder",
@@ -76,8 +76,9 @@ def arg_parser():
 
 class BatchLoader(DataLoader):
 
-    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir):
-        super(BatchLoader, self).__init__(voice_data_dir, map_data_dir, pos_tf_dir)
+    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir, normalize=False):
+        super(BatchLoader, self).__init__(voice_data_dir, map_data_dir, pos_tf_dir, 
+            is_normalize=normalize)
 
 
     def load_batch(self, batch_size, n_frames, suffle=True):
@@ -250,7 +251,55 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
             print("model saved at: {}".format(out_path))
             model.save(out_path)
 
-  
+
+def train_all_ch_simple(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
+    dl = BatchLoader(voice_data_dir, map_data_dir, pos_tf_dir, normalize=True)
+
+    num_epochs = 50000
+    batch_size = 8
+    learning_rate = 1e-4
+    n_frames = 6000
+    save_frequency = 200
+
+    model = VoiceEncoder()
+    if torch.cuda.is_available():
+        print("[INFO] CUDA is available")
+        model.cuda()
+
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    min_loss = 99999999.0
+
+    model.train()
+    for epoch in range(num_epochs):
+        train_loss = 0.0
+        cnt = 0
+
+        for data in dl.load_batch(batch_size=batch_size, n_frames=n_frames):
+            data = torch.Tensor(data)
+            data = Variable(data)
+            if torch.cuda.is_available():
+                data = data.cuda()
+            # ===================forward====================
+            output = model.forward(data)
+            loss = criterion(output, data)
+            # ===================backward====================
+            optimizer.zero_grad()
+            loss.backward()
+            train_loss += loss.item()
+            optimizer.step()
+
+            cnt += 1
+            # print('voice sample:{} Average loss: {:.4f}'.format(cnt, 1.0 * train_loss / cnt))
+
+        print('====> Epoch: {} Average loss: {:.4f}'.format(
+            epoch, 1.0 * train_loss / cnt))
+
+        if epoch % save_frequency == 0 and min_loss > train_loss / cnt:
+            min_loss = float(1.0 * train_loss / cnt)
+            print("model saved at: {}".format(out_path))
+            model.save(out_path)
+
 
 def main():
     args = arg_parser()
@@ -263,6 +312,9 @@ def main():
             pos_tf_dir=args.config, out_path=args.out)
     elif args.encoder == "all_ch_vae":
         train_all_ch_vae(voice_data_dir=args.voice, map_data_dir=args.map, 
+            pos_tf_dir=args.config, out_path=args.out)
+    elif args.encoder == "all_ch_simple":
+        train_all_ch_simple(voice_data_dir=args.voice, map_data_dir=args.map, 
             pos_tf_dir=args.config, out_path=args.out)
     else:
         print("[ERROR] main(): no such encoder {}".format(args.encoder))
