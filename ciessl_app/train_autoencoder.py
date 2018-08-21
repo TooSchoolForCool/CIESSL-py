@@ -211,7 +211,6 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
     num_epochs = 50000
     batch_size = 8
     learning_rate = 1e-4
-    next_lr_descent = 500
     n_frames = 6000
     save_frequency = 100
 
@@ -228,9 +227,8 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
         train_loss = 0.0
         cnt = 0
 
-        if epoch == next_lr_descent:
-            learning_rate /= 1.5
-            next_lr_descent += 500
+        if epoch % 20 == 0:
+            learning_rate *= 0.99
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
         for data in dl.load_batch(batch_size=batch_size, n_frames=n_frames):

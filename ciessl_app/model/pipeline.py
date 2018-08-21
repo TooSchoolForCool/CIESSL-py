@@ -6,6 +6,7 @@ import Queue
 import numpy as np
 import torch
 from torch.autograd import Variable
+import matplotlib.pyplot as plt
 
 from voice_engine.signal_process import stft, gcc_phat
 from voice_engine.utils import view_spectrum, view_gccphat
@@ -119,7 +120,7 @@ class Pipeline(object):
             samplerate (int): audio source sample rate
 
         Returns:
-            gccphat_pattern (np.ndarray (gccphat_size, n_pairs)): gcc_phat pattern feature
+            voice_code (np.ndarray (encode_features, )): encoded features
         """
         self.__check_autoencoder()
 

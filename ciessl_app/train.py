@@ -94,7 +94,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
     voice_enc = None
 
     if voice_feature == "enc":
-        voice_enc = VoiceEncoder()
+        voice_enc = VoiceVAE()
         voice_enc.load(voice_encoder_path)
 
     pipe = Pipeline(
