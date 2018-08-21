@@ -110,7 +110,7 @@ def train_voice_vae(voice_data_dir, out_path):
     num_epochs = 50000
     batch_size = 8
     learning_rate = 1e-4
-    lr_decay_freq = 50
+    lr_decay_freq = 10
     save_frequency = 100
 
     model = VoiceVAE()
@@ -145,7 +145,7 @@ def train_voice_vae(voice_data_dir, out_path):
         print('====> Epoch: {} Average loss: {:.6f} learning_rate: {:.7f}'.format(
             epoch, train_loss / bl.size(), learning_rate))
 
-        if min_loss > train_loss / bl.size():
+        if epoch % save_frequency == 0 and min_loss > train_loss / bl.size():
             min_loss = train_loss / bl.size()
             print("model saved at: {}".format(out_path))
             model.save(out_path)
