@@ -29,7 +29,7 @@ class Evaluator(object):
                     for i in range(rank, self.n_rooms_):
                         self.scoreboard_[i] += 1
         
-        self.total_exp_ += 1
+        self.total_exp_ += len(y)
         self.acc_history_.append([1.0 * score / self.total_exp_ for score in self.scoreboard_])
 
 
