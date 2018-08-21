@@ -222,7 +222,6 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
     min_loss = 99999999.0
 
     model.train()
-    model.load("all_ch_vae.model")
     for epoch in range(num_epochs):
         train_loss = 0.0
         cnt = 0

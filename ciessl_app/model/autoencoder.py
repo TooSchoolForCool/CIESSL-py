@@ -75,27 +75,49 @@ class VoiceVAE(nn.Module):
     def __init__(self):
         super(VoiceVAE, self).__init__()
 
-        input_size = 6000 * 16
+        nn_structure = [6000 * 16, 1000, 200, 15]
 
-        self.ifc1 = nn.Linear(input_size, 1000)
-        self.ifc2 = nn.Linear(1000, 200)
-        self.ifc31 = nn.Linear(200, 15)
-        self.ifc32 = nn.Linear(200, 15)
+        self.__build_encoder(nn_structure)
+        self.__build_decoder(nn_structure[::-1]) # reverse the structure
 
-        self.ofc1 = nn.Linear(15, 200)
-        self.ofc2 = nn.Linear(200, 1000)
-        self.ofc3 = nn.Linear(1000, input_size)
+
+    def __build_encoder(self, structure):
+        net = []
+
+        # here, we do not handle the very last layer
+        for i in range(1, len(structure) - 1):
+            net.append( nn.Linear(structure[i - 1], structure[i]) )
+            net.append( nn.ReLU() )
+
+        self.encoder_prefix_ = nn.Sequential(*net)
+
+        self.encoder_mu_ = nn.Linear(structure[-2], structure[-1])
+        self.encoder_sigma_ = nn.Linear(structure[-2], structure[-1])
+
+
+    def __build_decoder(self, structure):
+        net = []
+
+        # here, we do not handle the very last layer
+        for i in range(1, len(structure) - 1):
+            net.append( nn.Linear(structure[i - 1], structure[i]) )
+            net.append( nn.ReLU() )
+
+        # build last layer
+        net.append(nn.Linear(structure[-2], structure[-1]))
+        net.append( nn.Tanh() )
+
+        self.decoder_ = nn.Sequential(*net)
 
 
     def encode(self, x):
         """
         Encode for using the autoencoder
         """
-        h1 = F.relu(self.ifc1(x))
-        h2 = F.relu(self.ifc2(h1))
+        h1 = self.encoder_prefix_(x)
 
-        mu = self.ifc31(h2)
-        logvar = self.ifc32(h2)
+        mu = self.encoder_mu_(h1)
+        logvar = self.encoder_sigma_(h1)
 
         return self.reparametrize(mu, logvar)
 
@@ -104,10 +126,12 @@ class VoiceVAE(nn.Module):
         """
         Encode for training
         """
-        h1 = F.relu(self.ifc1(x))
-        h2 = F.relu(self.ifc2(h1))
+        h1 = self.encoder_prefix_(x)
+        
+        mu = self.encoder_mu_(h1)
+        logvar = self.encoder_sigma_(h1)
 
-        return self.ifc31(h2), self.ifc32(h2)
+        return mu, logvar
 
 
     def reparametrize(self, mu, logvar):
@@ -121,10 +145,7 @@ class VoiceVAE(nn.Module):
 
 
     def decode(self, z):
-        h1 = F.relu(self.ofc1(z))
-        h2 = F.relu(self.ofc2(h1))
-
-        return torch.tanh( self.ofc3(h2) )
+        return self.decoder_(z)
 
 
     def forward(self, x):
