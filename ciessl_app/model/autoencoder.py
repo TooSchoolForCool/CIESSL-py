@@ -10,7 +10,7 @@ class VoiceEncoder(nn.Module):
     def __init__(self):
         super(VoiceEncoder, self).__init__()
 
-        nn_structure = [6000 * 16, 1000, 20]
+        nn_structure = [6000 * 16, 800, 20]
 
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1])

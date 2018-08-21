@@ -86,7 +86,7 @@ def arg_parser():
 
 
 def init_pipeline(voice_feature, map_feature, voice_encoder_path):
-    n_frames=8000
+    n_frames=6000
     sound_fading_rate=0.999
     mic_fading_rate=0.993
     gccphat_size=15
@@ -94,7 +94,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
     voice_enc = None
 
     if voice_feature == "enc":
-        voice_enc = VoiceVAE()
+        voice_enc = VoiceEncoder()
         voice_enc.load(voice_encoder_path)
 
     pipe = Pipeline(

@@ -211,8 +211,9 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
     num_epochs = 50000
     batch_size = 8
     learning_rate = 1e-4
+    next_lr_descent = 500
     n_frames = 6000
-    save_frequency = 200
+    save_frequency = 100
 
     model = VoiceVAE()
     if torch.cuda.is_available():
@@ -226,6 +227,11 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
     for epoch in range(num_epochs):
         train_loss = 0.0
         cnt = 0
+
+        if epoch == next_lr_descent:
+            learning_rate /= 1.5
+            next_lr_descent += 500
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
         for data in dl.load_batch(batch_size=batch_size, n_frames=n_frames):
             data = torch.Tensor(data)
@@ -243,8 +249,8 @@ def train_all_ch_vae(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
             cnt += 1
             # print('voice sample:{} Average loss: {:.4f}'.format(cnt, 1.0 * train_loss / cnt))
 
-        print('====> Epoch: {} Average loss: {:.4f}'.format(
-            epoch, 1.0 * train_loss / cnt))
+        print('====> Epoch: {} Average loss: {:.7f} learning_rate: {:.2f}'.format(
+            epoch, 1.0 * train_loss / cnt, learning_rate))
 
         if epoch % save_frequency == 0 and min_loss > train_loss / cnt:
             min_loss = float(1.0 * train_loss / cnt)
@@ -257,9 +263,9 @@ def train_all_ch_simple(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
 
     num_epochs = 50000
     batch_size = 8
-    learning_rate = 1e-4
+    learning_rate = 1e-5
     n_frames = 6000
-    save_frequency = 200
+    save_frequency = 100
 
     model = VoiceEncoder()
     if torch.cuda.is_available():
@@ -292,7 +298,7 @@ def train_all_ch_simple(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
             cnt += 1
             # print('voice sample:{} Average loss: {:.4f}'.format(cnt, 1.0 * train_loss / cnt))
 
-        print('====> Epoch: {} Average loss: {:.4f}'.format(
+        print('====> Epoch: {} Average loss: {:.7f}'.format(
             epoch, 1.0 * train_loss / cnt))
 
         if epoch % save_frequency == 0 and min_loss > train_loss / cnt:
