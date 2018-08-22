@@ -56,7 +56,7 @@ class DataLoader(object):
         """
         save_segmented_map(map_data=self.segmented_map_, n_room=self.n_rooms_, 
             room_centers=self.room_centers_, origin=self.origin_, src=self.src_pos_, 
-            dst=self.dst_pos_, output_path="segmented_map.png")
+            dst=self.dst_pos_, boundary=self.boundary_, output_path="segmented_map.png")
 
 
     def load_map_info(self):
@@ -72,6 +72,8 @@ class DataLoader(object):
                 map_data["origin"] ( tuple (int, int) ): the index of the origin of the map
                 map_data["center"] ( list of tuples (int, int) ): each 2-item tuple
                     represents a center of a room
+                map_data["boundary"] (dict): boundary information of the map, bottom-left corner,
+                    and the top-right corner
         """
         map_data = {}
 
@@ -79,6 +81,7 @@ class DataLoader(object):
         map_data["n_room"] = self.n_rooms_
         map_data["center"] = self.room_centers_
         map_data["origin"] = self.origin_
+        map_data["boundary"] = self.boundary_
 
         return map_data
 
@@ -205,6 +208,10 @@ class DataLoader(object):
         self.resolution_ = data["resolution"]
         self.origin_ = (-int(data["origin"]["x"] / data["resolution"]), 
             -int(data["origin"]["y"] / data["resolution"]))
+        
+        bl = (data["boundary"]["min_x"], data["boundary"]["min_y"])
+        tr = (data["boundary"]["max_x"], data["boundary"]["max_y"])
+        self.boundary_ = {"bl" : bl, "tr" : tr}
 
 
     def __parse_pos_tf(self, pos_tf_dir):

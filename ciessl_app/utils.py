@@ -10,7 +10,7 @@ def show_flooding_map(map_data):
     cv2.destroyAllWindows()
 
 def save_segmented_map(map_data, n_room, room_centers, 
-    origin, src, dst, output_path="segmented_map.png"):
+    origin, src, dst, boundary, output_path="segmented_map.png"):
     """
     Save segmented map image to local
 
@@ -46,5 +46,12 @@ def save_segmented_map(map_data, n_room, room_centers,
     # paint microphone location
     for d in dst:
         cv2.circle(img, d, 2, (255, 255, 255), -1)
+
+    # crop out room only
+    min_x = boundary["bl"][0]
+    min_y = boundary["bl"][1]
+    max_x = boundary["tr"][0]
+    max_y = boundary["tr"][1]
+    img = img[min_y:max_y, min_x:max_x]
 
     cv2.imwrite(output_path, img)
