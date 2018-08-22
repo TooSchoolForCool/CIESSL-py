@@ -46,7 +46,7 @@ class Evaluator(object):
         data = np.asarray(self.acc_history_)
 
         plt.title("Accuracy Trendline")
-        plt.xlabel("Number of Learned Samples")
+        plt.xlabel("Number of Sound Events")
         plt.ylabel("Accuracy")
 
         x = [xi for xi in range(1, data.shape[0] + 1)]
@@ -59,7 +59,7 @@ class Evaluator(object):
         y_axis = [0.2 * i for i in range(0, 6)]
         plt.yticks(y_axis, y_axis, rotation=0)
         # plt.xticks(x, x, rotation=0)
-        plt.legend()
+        plt.legend(loc=0)
         plt.grid()
         plt.show()
 

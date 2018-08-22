@@ -119,7 +119,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     rank_svm = MLPClassifier(solver="adam")
-    l2r = OnlineL2R(rank_svm, q_size=100)
+    l2r = OnlineL2R(rank_svm, q_size=10, shuffle=True)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()

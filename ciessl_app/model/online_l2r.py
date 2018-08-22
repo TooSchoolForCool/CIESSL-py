@@ -1,3 +1,4 @@
+import random
 from collections import deque
 
 import numpy as np
@@ -5,17 +6,19 @@ import numpy as np
 
 class OnlineL2R(object):
 
-    def __init__(self, lm, q_size=100):
+    def __init__(self, lm, q_size=50, shuffle=False):
         """
         Constructor
 
         Args:
             lm (learning model object)
             q_size (int): max queue size for memorizing previous samples
+            shuffle (bool): shuffle the training dataset or not
         """
         self.xq_ = deque(maxlen=q_size)
         self.yq_ = deque(maxlen=q_size)
         self.lm_ = lm
+        self.shuffle_ = shuffle
 
 
     def partial_fit(self, X, y, classes=None):
@@ -37,7 +40,12 @@ class OnlineL2R(object):
         for y_ in y:
             self.yq_.append(y_)
 
-        X = np.asarray( list(self.xq_) )
-        y = np.asarray( list(self.yq_) )
+        idx = np.arange( len(self.xq_) )
+        if self.shuffle_:
+            rs = np.random.RandomState( random.randint(0, 2 ** 32 - 1) )
+            rs.shuffle(idx)
+
+        X = np.asarray( list(self.xq_) )[idx]
+        y = np.asarray( list(self.yq_) )[idx]
 
         return X, y
