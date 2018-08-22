@@ -10,6 +10,7 @@ from model.ranksvm import RankSVM
 from model.pipeline import Pipeline
 from model.evaluator import Evaluator
 from model.autoencoder import VoiceVAE, VoiceEncoder
+from model.online_l2r import OnlineL2R
 
 
 def arg_parser():
@@ -55,7 +56,7 @@ def arg_parser():
         dest="voice_feature",
         type=str,
         required=True,
-        help="voice feature: [gccphat, stft, enc]"
+        help="voice feature: [gccphat, stft, enc, gcc_enc]"
     )
     parser.add_argument(
         "--map_feature",
@@ -118,6 +119,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     rank_svm = MLPClassifier(solver="adam")
+    l2r = OnlineL2R(rank_svm, q_size=100)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
@@ -137,14 +139,14 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
             init_training_y = np.append(init_training_y, y, axis=0)
 
     classes = [i for i in range(1, map_data["n_room"] + 1)]
-    rank_svm.partial_fit(init_training_X, init_training_y, classes=classes)
+    l2r.partial_fit(init_training_X, init_training_y, classes=classes)
 
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
     for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice) 
-        predicted_y = rank_svm.predict_proba(X)
+        predicted_y = l2r.predict_proba(X)
         
         evaluator.evaluate(y, predicted_y)
 
@@ -153,7 +155,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         print("pred:\t%r" % (predicted_y))
         print("acc: %r" % (evaluator.get_eval_result()))
 
-        rank_svm.partial_fit(X, y)
+        l2r.partial_fit(X, y)
         cnt += 1
 
     evaluator.plot_acc_history()
