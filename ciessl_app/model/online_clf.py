@@ -4,7 +4,7 @@ from collections import deque
 import numpy as np
 
 
-class OnlineL2R(object):
+class OnlineClassifier(object):
 
     def __init__(self, lm, q_size=50, shuffle=False):
         """
@@ -21,25 +21,36 @@ class OnlineL2R(object):
         self.shuffle_ = shuffle
 
 
-    def partial_fit(self, X, y, classes=None):
-        X, y = self.__prep_training_set(X, y)
+    def fit(self, X, y):
+        self.lm_.fit(X, y)
 
-        if classes is None:
-            self.lm_.partial_fit(X, y)
-        else:
+
+    def partial_fit(self, X, y, classes=None, n_iter=10):
+        # add new-coming data into memory
+        for x_ in X:
+            self.xq_.append(x_)
+        for y_ in y:
+            self.yq_.append(y_)
+
+        # initialize partial fit
+        if classes is not None:
             self.lm_.partial_fit(X, y, classes=classes)
+            n_iter -= 1  
+
+        # run a number of interations
+        for _ in range(0, n_iter):
+            X, y = self.__prep_training_set()
+            self.lm_.partial_fit(X, y)
 
         
     def predict_proba(self, X):
         return self.lm_.predict_proba(X)
 
 
-    def __prep_training_set(self, X, y):
-        for x_ in X:
-            self.xq_.append(x_)
-        for y_ in y:
-            self.yq_.append(y_)
-
+    def __prep_training_set(self):
+        """
+        Shuffling dataset
+        """
         idx = np.arange( len(self.xq_) )
         if self.shuffle_:
             rs = np.random.RandomState( random.randint(0, 2 ** 32 - 1) )
