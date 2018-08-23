@@ -11,6 +11,7 @@ from model.pipeline import Pipeline
 from model.evaluator import Evaluator
 from model.autoencoder import VoiceVAE, VoiceEncoder
 from model.online_l2r import OnlineL2R
+import utils
 
 
 def arg_parser():
@@ -51,19 +52,23 @@ def arg_parser():
         required=True,
         help="choose learning mode: [clf, reg]"
     )
+
+    voice_feature = ["gccphat", "stft", "enc", "gcc_enc"]
     parser.add_argument(
         "--voice_feature",
         dest="voice_feature",
         type=str,
         required=True,
-        help="voice feature: [gccphat, stft, enc, gcc_enc]"
+        help="voice feature: {}".format(voice_feature)
     )
+
+    map_feature = ["flooding"]
     parser.add_argument(
         "--map_feature",
         dest="map_feature",
         type=str,
         # required=True,
-        help="map feature"
+        help="map feature: {}".format(map_feature)
     )
     parser.add_argument(
         "--voice_encoder",
@@ -95,8 +100,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
     voice_enc = None
 
     if voice_feature in ["enc", "gcc_enc"]:
-        voice_enc = VoiceVAE()
-        voice_enc.load(voice_encoder_path)
+        voice_enc = utils.load_encoder_model(cfg_path=voice_encoder_path)
 
     pipe = Pipeline(
         n_frames=n_frames,
@@ -140,6 +144,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     classes = [i for i in range(1, map_data["n_room"] + 1)]
     l2r.partial_fit(init_training_X, init_training_y, classes=classes)
+    # l2r.fit(init_training_X, init_training_y)
 
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
@@ -147,7 +152,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice) 
         predicted_y = l2r.predict_proba(X)
-        
+
         evaluator.evaluate(y, predicted_y)
 
         print("Sample %d" % cnt)

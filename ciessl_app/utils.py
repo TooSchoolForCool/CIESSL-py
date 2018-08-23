@@ -1,7 +1,11 @@
 import random
+import os
 
 import numpy as np
 import cv2
+import json
+
+from model.autoencoder import VoiceVAE, VoiceEncoder
 
 
 def show_flooding_map(map_data):
@@ -55,3 +59,29 @@ def save_segmented_map(map_data, n_room, room_centers,
     img = img[min_y:max_y, min_x:max_x]
 
     cv2.imwrite(output_path, img)
+
+
+def load_encoder_model(cfg_path):
+    json_file=open(cfg_path).read()
+    data = json.loads(json_file)
+
+    encoder_type = data["encoder_type"]
+    nn_structure = data["nn_structure"]
+
+    # reconstruct model params file directory
+    cwd = os.getcwd().split("/") + cfg_path.split("/")
+    cwd[-1] = data["params_dir"]
+    params_dir = '/'.join(cwd)
+
+    encoder = None
+    if encoder_type == "VoiceEncoder":
+        encoder = VoiceEncoder(nn_structure=nn_structure)
+    elif encoder_type == "VoiceVAE":
+        encoder = VoiceVAE(nn_structure=nn_structure)
+    else:
+        print("[ERROR] utils.load_encoder_model(): do not support encoder type: {}".format(encoder_type))
+        raise
+
+    encoder.load(params_dir)
+
+    return encoder

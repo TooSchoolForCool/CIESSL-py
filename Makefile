@@ -26,7 +26,7 @@ train_autoencoder:
 train:
 	python ciessl_app/train.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf" --voice_feature="gcc_enc" \
-		--voice_encoder="gccphat_vae.model" --map_feature="flooding"
+		--voice_encoder="./data/model/gccphat_ae_2.json" --map_feature="flooding"
 
 cmp_enc:
 	python ciessl_app/cmp_encode.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \

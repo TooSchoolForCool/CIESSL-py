@@ -7,10 +7,8 @@ import torch.nn.functional as F
 
 
 class VoiceEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, nn_structure=[6000, 800, 20]):
         super(VoiceEncoder, self).__init__()
-
-        nn_structure = [6000, 800, 20]
 
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1])
@@ -79,10 +77,8 @@ class VoiceEncoder(nn.Module):
 
 
 class VoiceVAE(nn.Module):
-    def __init__(self):
+    def __init__(self, nn_structure=[6000, 2000, 500, 100]):
         super(VoiceVAE, self).__init__()
-
-        nn_structure = [6000, 2000, 500, 100]
 
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1]) # reverse the structure

@@ -56,6 +56,8 @@ class Pipeline(object):
                 map_data["origin"] ( tuple (int, int) ): the index of the origin of the map
                 map_data["center"] ( list of 2-item tuple (x, y) ): each 2-item tuple
                     represents a center of a room
+                map_data["boundary"] (dict): boundary information of the map, bottom-left corner,
+                    and the top-right corner
             voice_data (dictionary):
                 voice_data["samplerate"] (int): samplerate of the voice data
                 voice_data["src"] (int, int): coordinate of the sound source in the map
@@ -69,8 +71,12 @@ class Pipeline(object):
         """
         X = []
         y = []
-        
-        # calculate sound feature
+
+        src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
+
+        ######################################################
+        # Extract sound feature
+        ######################################################
         frame_stack = voice_data["frames"]
         samplerate = voice_data["samplerate"]
         sound_feature = None
@@ -84,25 +90,21 @@ class Pipeline(object):
         elif self.voice_feature_ == "gcc_enc":
             sound_feature = self.__encode_gcc(frame_stack, samplerate)
 
-        src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
-        
-        # for i in range(0, map_data["n_room"]):
-        #     if src_room != i + 1:
-        #         continue
-        #     # form map feature
-        #     src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][i], 
-        #         self.sound_fading_rate_)
+        ######################################################
+        # Extract Map feature
+        ######################################################
+        map_feature = None
+
+        # if self.map_feature_ == "flooding":
+        #     src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][src_room-1], 
+        #         map_data["boundary"], self.sound_fading_rate_)
         #     mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
-        #         self.mic_fading_rate_)
+        #         map_data["boundary"], self.mic_fading_rate_)
         #     product_map = self.__product_mask(src_flooding_map, mic_flooding_map)
-        #     flatten_map = product_map.flatten()
+        #     show_flooding_map(product_map)
+        #     map_feature = product_map.flatten()
 
-        #     feature_vec = np.append(sound_feature, flatten_map)
-        #     # label = 1 if src_room == i + 1 else 0
-        #     label = src_room
-
-        #     X.append(feature_vec)
-        #     y.append(label)
+        # feature_vec = np.append(sound_feature, flatten_map)
 
         X.append(sound_feature)
         y.append(src_room)
@@ -187,7 +189,7 @@ class Pipeline(object):
 
 
 
-    def __product_mask(self, ma, mb):
+    def __product_mask(self, ma, mb, normalize=False):
         assert(ma.shape == mb.shape)
         product_map = np.zeros((ma.shape[0], ma.shape[1], 1), np.uint8)
 
@@ -198,7 +200,7 @@ class Pipeline(object):
         return product_map
 
 
-    def __flooding_map(self, grid_map, src, rate):
+    def __flooding_map(self, grid_map, center, boundary, rate):
         flooding_map = np.zeros((grid_map.shape[0], grid_map.shape[1], 1), np.uint8)
         visited = np.zeros(grid_map.shape, np.uint8)
 
@@ -206,8 +208,8 @@ class Pipeline(object):
         height, width = grid_map.shape
 
         q = Queue.Queue()
-        q.put( (src[0], src[1]) )
-        visited[src[1], src[0]] = 1
+        q.put( (center[0], center[1]) )
+        visited[center[1], center[0]] = 1
 
         while not q.empty():
             level_size = q.qsize()
@@ -230,23 +232,14 @@ class Pipeline(object):
                     q.put( (x, y - 1) )
                     visited[y - 1, x] = 1
 
-                # if x + 1 < width and y + 1 < height and visited[y + 1, x + 1] == 0:
-                #     q.put( (x + 1, y + 1) )
-                #     visited[y + 1, x + 1] = 1
-                # if x - 1 >= 0 and y + 1 < height and visited[y + 1, x - 1] == 0:
-                #     q.put( (x - 1, y + 1) )
-                #     visited[y + 1, x - 1] = 1
-                # if y - 1 >= 0 and x + 1 < width and visited[y - 1, x + 1] == 0:
-                #     q.put( (x + 1, y - 1) )
-                #     visited[y - 1, x + 1] = 1
-                # if y - 1 >= 0 and x - 1 >= 0 and visited[y - 1, x - 1] == 0:
-                #     q.put( (x - 1, y - 1) )
-                #     visited[y - 1, x - 1] = 1
-
-                # print("paint (%d, %d) with %d" % (x, y, int(pivot)))
                 flooding_map[y, x] = int(pivot)
 
             pivot *= rate
+
+        # crop out map region
+        min_x, min_y = boundary["bl"][0], boundary["bl"][1]
+        max_x, max_y = boundary["tr"][0], boundary["tr"][1]
+        flooding_map = flooding_map[min_y:max_y, min_x:max_x]
 
         return flooding_map
 
