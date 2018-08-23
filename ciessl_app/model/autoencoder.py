@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 
 class VoiceEncoder(nn.Module):
-    def __init__(self, nn_structure=[6000, 800, 20]):
+    def __init__(self, nn_structure=[4000*16, 1000, 500, 100]):
         super(VoiceEncoder, self).__init__()
 
         self.__build_encoder(nn_structure)

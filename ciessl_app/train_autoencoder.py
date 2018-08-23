@@ -85,6 +85,9 @@ class BatchLoader(DataLoader):
 
 
     def load_batch(self, batch_size, suffle=True, flatten=True):
+        skip_n_frames = 2000
+        n_frames = 4000
+
         idx = np.arange( len(self.dataset_) )
 
         if suffle:
@@ -93,8 +96,8 @@ class BatchLoader(DataLoader):
         
         batch_data = []
         for i in idx:
-            data = self.dataset_[i]
-
+            data = self.dataset_[i][skip_n_frames:skip_n_frames+n_frames, :]
+    
             if flatten:
                 data = data.T.flatten()
 
@@ -213,7 +216,7 @@ def main():
     if args.encoder == "voice_vae":
         train_voice_vae(voice_data_dir=args.voice, out_path=args.out)
     elif args.encoder == "voice_ae":
-        train_simple_voice_enc(voice_data_dir=args.voice, out_path=args.out)
+        train_voice_ae(voice_data_dir=args.voice, out_path=args.out)
     else:
         print("[ERROR] main(): no such encoder {}".format(args.encoder))
         raise
