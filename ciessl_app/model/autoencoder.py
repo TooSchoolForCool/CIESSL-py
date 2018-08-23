@@ -10,10 +10,11 @@ class VoiceEncoder(nn.Module):
     def __init__(self):
         super(VoiceEncoder, self).__init__()
 
-        nn_structure = [6000 * 16, 800, 20]
+        nn_structure = [6000, 800, 20]
 
         self.__build_encoder(nn_structure)
         self.__build_decoder(nn_structure[::-1])
+        self.loss_ = nn.MSELoss(size_average=False)
 
 
     def encode(self, x):
@@ -28,6 +29,10 @@ class VoiceEncoder(nn.Module):
         code = self.encode(x)
         out = self.decode(code)
         return out
+
+
+    def loss(self, recon_x, x):
+        return self.loss_(recon_x, x)
 
 
     def __build_encoder(self, structure):
@@ -67,8 +72,10 @@ class VoiceEncoder(nn.Module):
         if torch.cuda.is_available():
             super(VoiceEncoder, self).cuda()
             self.load_state_dict( torch.load(model_dir) )
+            print("Load Model [{}] to GPU".format(model_dir))
         else:
             self.load_state_dict( torch.load(model_dir, map_location="cpu") )
+            print("Load Model [{}] to CPU".format(model_dir))
 
 
 class VoiceVAE(nn.Module):
@@ -179,9 +186,10 @@ class VoiceVAE(nn.Module):
         if torch.cuda.is_available():
             super(VoiceVAE, self).cuda()
             self.load_state_dict( torch.load(model_dir) )
-            print("Load GPU Model")
+            print("Load Model [{}] to GPU".format(model_dir))
         else:
             self.load_state_dict( torch.load(model_dir, map_location="cpu") )
+            print("Load Model [{}] to CPU".format(model_dir))
 
 
 def test_autoencoder():

@@ -20,13 +20,13 @@ save_gccphat:
 		--config="ciessl_app/config/bh9f_pos_tf.json" --out="data/gccphat"
 
 train_autoencoder:
-	python ciessl_app/train_autoencoder.py --voice="data/gccphat" --encoder="voice_vae" \
-		--out="gccphat_vae.model"
+	python ciessl_app/train_autoencoder.py --voice="data/gccphat" --encoder="voice_ae" \
+		--out="gccphat_ae.model"
 
 train:
 	python ciessl_app/train.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf" --voice_feature="gcc_enc" \
-		--voice_encoder="gccphat_vae.model"
+		--voice_encoder="gccphat_vae.model" --map_feature="flooding"
 
 cmp_enc:
 	python ciessl_app/cmp_encode.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \

@@ -38,7 +38,7 @@ def arg_parser():
         help="output directory"
     )
 
-    valid_encoder = ["voice_vae", "voice_simple"]
+    valid_encoder = ["voice_vae", "voice_ae"]
     parser.add_argument(
         "--encoder",
         dest="encoder",
@@ -59,17 +59,23 @@ def arg_parser():
 
 class BatchLoader(DataLoader):
 
-    def __init__(self, data_dir):
-        self.__load_dataset(data_dir)
+    def __init__(self, data_dir, mode="all"):
+        self.__load_dataset(data_dir, mode)
 
 
-    def __load_dataset(self, data_dir):
+    def __load_dataset(self, data_dir, mode):
         dataset = []
 
         for file in os.listdir(data_dir):
             if file.endswith(".pickle"):
                 data = np.load( os.path.join(data_dir, file) )
                 dataset.append(data)
+
+        if mode == "train":
+            idx = np.arange( len(dataset) )
+            rs = np.random.RandomState(0)
+            rs.shuffle(idx)
+            dataset = np.asarray(dataset)[idx]
 
         self.dataset_ = dataset
 
@@ -134,10 +140,11 @@ def train_voice_vae(voice_data_dir, out_path):
             data = Variable(data)
             if torch.cuda.is_available():
                 data = data.cuda()
-
-            optimizer.zero_grad()
+            # forward
             recon_batch, mu, logvar = model(data)
             loss = model.loss(recon_batch, data, mu, logvar)
+            # backward
+            optimizer.zero_grad()
             loss.backward()
             train_loss += loss.item()
             optimizer.step()
@@ -151,8 +158,53 @@ def train_voice_vae(voice_data_dir, out_path):
             model.save(out_path)
 
 
-def train_simple_voice_enc(voice_data_dir, out_path):
-    pass
+def train_voice_ae(voice_data_dir, out_path):
+    bl = BatchLoader(voice_data_dir)
+
+    num_epochs = 50000
+    batch_size = 8
+    learning_rate = 1e-4
+    lr_decay_freq = 10
+    save_frequency = 100
+
+    model = VoiceEncoder()
+    if torch.cuda.is_available():
+        print("[INFO] CUDA is available")
+        model.cuda()
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    min_loss = 99999999.0
+
+    model.train()
+    for epoch in range(num_epochs):
+        train_loss = 0.0
+
+        if epoch % lr_decay_freq == 0 and epoch != 0:
+            learning_rate *= 0.99
+            for g in optimizer.param_groups:
+                g['lr'] = learning_rate
+
+        for batch in bl.load_batch(batch_size=batch_size, suffle=True, flatten=True):
+            data = torch.Tensor(batch)
+            data = Variable(data)
+            if torch.cuda.is_available():
+                data = data.cuda()
+            # forward
+            recon_batch = model(data)
+            loss = model.loss(recon_batch, data)
+            # backward
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+
+        print('====> Epoch: {}\tAverage loss: {:.6f}\tlearning_rate: {:.7f}'.format(
+            epoch, train_loss / bl.size(), learning_rate))
+
+        if epoch % save_frequency == 0 and min_loss > train_loss / bl.size():
+            min_loss = train_loss / bl.size()
+            print("***** model saved at: {}".format(out_path))
+            model.save(out_path)
 
 
 def main():
@@ -160,7 +212,7 @@ def main():
 
     if args.encoder == "voice_vae":
         train_voice_vae(voice_data_dir=args.voice, out_path=args.out)
-    elif args.encoder == "voice_simple":
+    elif args.encoder == "voice_ae":
         train_simple_voice_enc(voice_data_dir=args.voice, out_path=args.out)
     else:
         print("[ERROR] main(): no such encoder {}".format(args.encoder))
