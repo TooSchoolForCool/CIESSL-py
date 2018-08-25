@@ -28,8 +28,9 @@ def convert_type(frames, format_in, format_out):
         raise Exception("Do NOT support converting from {} to {}".format(format_in, format_out))
 
 
-def stft(frames, sample_rate, window=('tukey', .25), segment_size=None, overlap_size=None):
-    freqs, time, spec = sig.stft(frames, sample_rate, window, segment_size, overlap_size)
+def stft(frames, sample_rate, window=('tukey', .25), segment_size=None, overlap_size=None, nfft=None):
+    freqs, time, spec = sig.stft(frames, sample_rate, window=window, nperseg=segment_size,
+        noverlap=overlap_size, nfft=nfft)
 
     # amplitude component of STFT
     amp = np.abs(spec)

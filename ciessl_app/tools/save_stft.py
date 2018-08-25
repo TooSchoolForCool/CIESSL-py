@@ -72,7 +72,8 @@ def save_stft(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
         phase_stack = []
         # gccphat_pattern (np.ndarray (gccphat_size, n_pairs)): GCC-PHAT features
         for i in range(0, 16):
-            freqs, time, amp, phase = stft(frames[:24000, i], samplerate)
+            freqs, time, amp, phase = stft(frames[:24000, i], samplerate, nfft=1024, 
+                segment_size=256, overlap_size=224)
             amp_stack.append(amp)
             phase_stack.append(phase)
 
