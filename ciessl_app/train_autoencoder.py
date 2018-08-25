@@ -10,6 +10,7 @@ import torch.nn.functional as F
 
 from model.autoencoder import VoiceVAE, VoiceEncoder
 from model.data_loader import DataLoader
+from model.batch_loader import BatchLoader
 
 
 def arg_parser():
@@ -57,61 +58,6 @@ def arg_parser():
     return args
 
 
-class BatchLoader(DataLoader):
-
-    def __init__(self, data_dir, mode="all"):
-        self.__load_dataset(data_dir, mode)
-
-
-    def __load_dataset(self, data_dir, mode):
-        dataset = []
-
-        for file in os.listdir(data_dir):
-            if file.endswith(".pickle"):
-                data = np.load( os.path.join(data_dir, file) )
-                dataset.append(data)
-
-        if mode == "train":
-            idx = np.arange( len(dataset) )
-            rs = np.random.RandomState(0)
-            rs.shuffle(idx)
-            dataset = np.asarray(dataset)[idx]
-
-        self.dataset_ = dataset
-
-
-    def size(self):
-        return len( self.dataset_ )
-
-
-    def load_batch(self, batch_size, suffle=True, flatten=True):
-        skip_n_frames = 2000
-        n_frames = 4000
-
-        idx = np.arange( len(self.dataset_) )
-
-        if suffle:
-            rs = np.random.RandomState( random.randint(0, 2 ** 32 - 1) )
-            rs.shuffle(idx)
-        
-        batch_data = []
-        for i in idx:
-            data = self.dataset_[i][skip_n_frames:skip_n_frames+n_frames, :]
-    
-            if flatten:
-                data = data.T.flatten()
-
-            batch_data.append(data)
-
-            if len(batch_data) == batch_size:
-                # (n_samples, n_features)
-                yield np.asarray(batch_data)
-                batch_data = []
-
-        if batch_data:
-            yield np.asarray(batch_data)
-
-
 def train_voice_vae(voice_data_dir, out_path):
     bl = BatchLoader(voice_data_dir)
 
@@ -155,7 +101,7 @@ def train_voice_vae(voice_data_dir, out_path):
         print('====> Epoch: {}\tAverage loss: {:.6f}\tlearning_rate: {:.7f}'.format(
             epoch, train_loss / bl.size(), learning_rate))
 
-        if epoch % save_frequency == 0 and min_loss > train_loss / bl.size():
+        if epoch != 0 and epoch % save_frequency == 0 and min_loss > train_loss / bl.size():
             min_loss = train_loss / bl.size()
             print("***** model saved at: {}".format(out_path))
             model.save(out_path)
