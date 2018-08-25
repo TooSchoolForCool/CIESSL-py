@@ -6,6 +6,8 @@ import numpy as np
 
 from voice_engine.signal_process import gcc_phat
 from voice_engine.signal_process import stft
+from voice_engine.utils import view_spectrum
+
 # import DataLoader
 sys.path.append(os.path.dirname(__file__) + "/../")
 from model.data_loader import DataLoader
@@ -67,14 +69,23 @@ def save_stft(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
         frames = voice["frames"]
         samplerate = voice["samplerate"]
 
+        amp_stack = []
+        phase_stack = []
         # gccphat_pattern (np.ndarray (gccphat_size, n_pairs)): GCC-PHAT features
-        freqs, time, amp, phase = stft(frames, samplerate)
+        for i in range(0, 16):
+            _, _, amp, phase = stft(frames[:, 0], samplerate)
+            amp_stack.append(amp)
+            phase_stack.append(phase)
 
         amp_output_path = out_path + '/amp/' + "stft-amp-" + str(voice_cnt) + ".pickle"
         phase_output_path = out_path + '/phase/' + "stft-phase-" + str(voice_cnt) + ".pickle"
 
-        amp.dump(amp_output_path)
-        phase.dump(phase_output_path)
+        # data is saved in form of (n_channels, n_freq_bins, n_time_bins)
+        amp_stack = np.asarray(amp_stack)
+        phase_stack = np.asarray(phase_stack)
+
+        amp_stack.dump(amp_output_path)
+        phase_stack.dump(phase_output_path)
 
         print("[INFO] amp file is saved at: %s" % (amp_output_path))
         print("[INFO] phase file is saved at: %s" % (phase_output_path))
