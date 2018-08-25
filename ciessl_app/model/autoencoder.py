@@ -6,8 +6,27 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 
-class VoiceEncoder(nn.Module):
-    def __init__(self, nn_structure=[4000*16, 1000, 500, 100]):
+class AutoEncoder(nn.Module):
+    def __init__(self):
+        super(AutoEncoder, self).__init__()
+
+
+    def save(self, out_path):
+        torch.save(self.state_dict(), out_path)
+
+
+    def load(self, model_dir):
+        if torch.cuda.is_available():
+            super(VoiceEncoder, self).cuda()
+            self.load_state_dict( torch.load(model_dir) )
+            print("Load Model [{}] to GPU".format(model_dir))
+        else:
+            self.load_state_dict( torch.load(model_dir, map_location="cpu") )
+            print("Load Model [{}] to CPU".format(model_dir))    
+
+
+class VoiceEncoder(AutoEncoder):
+    def __init__(self, nn_structure=[8000*16, 1000, 500, 100]):
         super(VoiceEncoder, self).__init__()
 
         self.__build_encoder(nn_structure)
@@ -62,21 +81,7 @@ class VoiceEncoder(nn.Module):
         self.decoder_ = nn.Sequential(*net)
 
 
-    def save(self, out_path):
-        torch.save(self.state_dict(), out_path)
-
-
-    def load(self, model_dir):
-        if torch.cuda.is_available():
-            super(VoiceEncoder, self).cuda()
-            self.load_state_dict( torch.load(model_dir) )
-            print("Load Model [{}] to GPU".format(model_dir))
-        else:
-            self.load_state_dict( torch.load(model_dir, map_location="cpu") )
-            print("Load Model [{}] to CPU".format(model_dir))
-
-
-class VoiceVAE(nn.Module):
+class VoiceVAE(AutoEncoder):
     def __init__(self, nn_structure=[6000, 2000, 500, 100]):
         super(VoiceVAE, self).__init__()
 
@@ -174,18 +179,33 @@ class VoiceVAE(nn.Module):
         return BCE + KLD
 
 
-    def save(self, out_path):
-        torch.save(self.state_dict(), out_path)
+class VoiceConvAE(AutoEncoder):
+    def __init__(self, nn_structure=[6000, 2000, 500, 100]):
+        super(VoiceConvAE, self).__init__()
+        
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 16, 3, stride=3, padding=1),  # (b, 16, 10, 10)
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=2),  # (b, 16, 5, 5)
+            nn.Conv2d(16, 8, 3, stride=2, padding=1),  # (b, 8, 3, 3)
+            nn.ReLU(True),
+            nn.MaxPool2d(2, stride=1)  # (b, 8, 2, 2)
+        )
+        
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(8, 16, 3, stride=2),  # (b, 16, 5, 5)
+            nn.ReLU(True),
+            nn.ConvTranspose2d(16, 8, 5, stride=3, padding=1),  # (b, 8, 15, 15)
+            nn.ReLU(True),
+            nn.ConvTranspose2d(8, 1, 2, stride=2, padding=1),  # (b, 1, 28, 28)
+            nn.Tanh()
+        )
 
 
-    def load(self, model_dir):
-        if torch.cuda.is_available():
-            super(VoiceVAE, self).cuda()
-            self.load_state_dict( torch.load(model_dir) )
-            print("Load Model [{}] to GPU".format(model_dir))
-        else:
-            self.load_state_dict( torch.load(model_dir, map_location="cpu") )
-            print("Load Model [{}] to CPU".format(model_dir))
+    def forward(self, x):
+        encode = self.encoder(x)
+        decode = self.decoder(encode)
+        return encode, decode
 
 
 def test_autoencoder():
