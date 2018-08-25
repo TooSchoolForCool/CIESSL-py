@@ -24,8 +24,8 @@ def arg_parser():
     parser = argparse.ArgumentParser(prog='Training Voice AutoEncoder')
 
     parser.add_argument(
-        "--voice",
-        dest="voice",
+        "--data",
+        dest="data",
         type=str,
         required=True,
         help="Input voice data directory"
@@ -160,9 +160,9 @@ def main():
     args = arg_parser()
 
     if args.encoder == "voice_vae":
-        train_voice_vae(voice_data_dir=args.voice, out_path=args.out)
+        train_voice_vae(voice_data_dir=args.data, out_path=args.out)
     elif args.encoder == "voice_ae":
-        train_voice_ae(voice_data_dir=args.voice, out_path=args.out)
+        train_voice_ae(voice_data_dir=args.data, out_path=args.out)
     else:
         print("[ERROR] main(): no such encoder {}".format(args.encoder))
         raise
