@@ -61,19 +61,18 @@ def arg_parser():
 
 
 def save_stft(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
-
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir)
 
     voice_cnt = 1
     for voice in dl.voice_data_iterator():
         frames = voice["frames"]
-        samplerate = voice["samplerate"]
+        samplerate = 48000
 
         amp_stack = []
         phase_stack = []
         # gccphat_pattern (np.ndarray (gccphat_size, n_pairs)): GCC-PHAT features
         for i in range(0, 16):
-            _, _, amp, phase = stft(frames[:, 0], samplerate)
+            freqs, time, amp, phase = stft(frames[:24000, i], samplerate)
             amp_stack.append(amp)
             phase_stack.append(phase)
 

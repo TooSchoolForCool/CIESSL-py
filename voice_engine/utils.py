@@ -27,6 +27,7 @@ def view_spectrum(time, freq, spec, title, save=False):
     plt.ylabel('Frequency [Hz]')
     plt.xlabel('Time [sec]')
     plt.title(title)
+    plt.colorbar()
 
     if save:
         plt.savefig(title + ".png")
