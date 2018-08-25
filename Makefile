@@ -1,5 +1,5 @@
 .PHONY: install remove dev voice_preprocess train save_gccphat \
-	train_autoencoder test_enc wav2pickle
+	train_autoencoder test_enc wav2pickle save_stft
 
 install:
 	python setup.py bdist_wheel
@@ -19,6 +19,10 @@ wav2pickle:
 voice_preprocess:
 	python ciessl_app/tools/voice_preprocess.py --data_in="data/raw_voice" --data_out="data/active_voice" \
 		--chunk_interval=20 --mode=3
+
+save_stft:
+	python ciessl_app/tools/save_stft.py --voice="data/hand_vad_pickle" --map="data/map/bh9f_lab_map.json" \
+		--config="ciessl_app/config/bh9f_pos_tf.json" --out="data/stft_data"
 
 save_gccphat:
 	python ciessl_app/tools/save_gccphat.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json" \
