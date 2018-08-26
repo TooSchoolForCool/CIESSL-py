@@ -3,12 +3,14 @@ import argparse
 import random
 
 import numpy as np
+from sklearn.preprocessing import normalize
 import torch
 from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
-from model.autoencoder import VoiceVAE, VoiceEncoder
+from model.autoencoder import VoiceVAE, VoiceEncoder, VoiceConvAE
 from model.data_loader import DataLoader
 from model.batch_loader import BatchLoader
 
@@ -157,7 +159,19 @@ def train_voice_ae(voice_data_dir, out_path):
 
 
 def train_voice_cae(voice_data_dir, out_path):
-    bl = BatchLoader(voice_data_dir)
+    n_freq_bins = 256
+    n_time_bins = 256
+
+    def min_max_scaler(data):
+        # log-scale transform
+        data = np.log10(data)
+        for i in range(data.shape[0]):
+            min_val = np.amin(data[i])
+            max_val = np.amax(data[i])
+            data[i] = 1.0 * (data[i] - min_val) / (max_val - min_val)
+        return data[:, :n_freq_bins, :n_time_bins]
+
+    bl = BatchLoader(voice_data_dir, scaler=min_max_scaler, mode="train")
 
     num_epochs = 50000
     batch_size = 8
@@ -165,7 +179,7 @@ def train_voice_cae(voice_data_dir, out_path):
     lr_decay_freq = 10
     save_frequency = 100
 
-    model = VoiceVAE()
+    model = VoiceConvAE()
     if torch.cuda.is_available():
         print("[INFO] CUDA is available")
         model.cuda()
@@ -181,11 +195,13 @@ def train_voice_cae(voice_data_dir, out_path):
             learning_rate *= 0.99
             for g in optimizer.param_groups:
                 g['lr'] = learning_rate
+        
         for batch in bl.load_batch(batch_size=batch_size, suffle=True, flatten=False):
             data = torch.Tensor(batch)
             data = Variable(data)
             if torch.cuda.is_available():
                 data = data.cuda()
+
             # forward
             recon_batch = model(data)
             loss = model.loss(recon_batch, data)
@@ -198,7 +214,7 @@ def train_voice_cae(voice_data_dir, out_path):
         print('====> Epoch: {}\tAverage loss: {:.6f}\tlearning_rate: {:.7f}'.format(
             epoch, train_loss / bl.size(), learning_rate))
 
-        if epoch % save_frequency == 0 and min_loss > train_loss / bl.size():
+        if epoch != 0 and epoch % save_frequency == 0 and min_loss > train_loss / bl.size():
             min_loss = train_loss / bl.size()
             print("***** model saved at: {}".format(out_path))
             model.save(out_path)

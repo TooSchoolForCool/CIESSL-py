@@ -15,7 +15,8 @@ requirements = [
     'enum34',
     'matplotlib',
     'scikit-learn',
-    'opencv-python'
+    'opencv-python',
+    'librosa'
 ]
 
 setup_requirements = [

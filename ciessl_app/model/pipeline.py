@@ -132,7 +132,7 @@ class Pipeline(object):
         voice_code = []
 
         frames = frame_stack.T  # frames (n_channels, n_samples)
-        frames = frames[:, :self.n_frames_].flatten()
+        frames = frames[:, 2000:self.n_frames_].flatten()
         frames = torch.Tensor(frames)
         frames = Variable(frames)
         if torch.cuda.is_available():

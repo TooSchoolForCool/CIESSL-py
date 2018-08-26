@@ -1,5 +1,7 @@
 import os
 
+import librosa
+import numpy as np
 import torch
 from torch import nn
 from torch.autograd import Variable
@@ -183,29 +185,91 @@ class VoiceConvAE(AutoEncoder):
     def __init__(self, nn_structure=[6000, 2000, 500, 100]):
         super(VoiceConvAE, self).__init__()
         
-        self.encoder = nn.Sequential(
-            nn.Conv2d(1, 16, 3, stride=3, padding=1),  # (b, 16, 10, 10)
-            nn.ReLU(True),
-            nn.MaxPool2d(2, stride=2),  # (b, 16, 5, 5)
-            nn.Conv2d(16, 8, 3, stride=2, padding=1),  # (b, 8, 3, 3)
-            nn.ReLU(True),
-            nn.MaxPool2d(2, stride=1)  # (b, 8, 2, 2)
+        self.encoder_ = nn.Sequential(
+            nn.Conv2d(16, 32, (3, 3), stride=(2, 2), padding=1),  # (b, 16, 10, 10)
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(True),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(32, 64, (3, 3), stride=(2, 2), padding=1),  # (b, 16, 10, 10)
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(True),
+            nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(64, 128, (3, 3), stride=(2, 2), padding=1),  # (b, 16, 10, 10)
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(True),
+            nn.MaxPool2d(2, 2),
         )
-        
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(8, 16, 3, stride=2),  # (b, 16, 5, 5)
-            nn.ReLU(True),
-            nn.ConvTranspose2d(16, 8, 5, stride=3, padding=1),  # (b, 8, 15, 15)
-            nn.ReLU(True),
-            nn.ConvTranspose2d(8, 1, 2, stride=2, padding=1),  # (b, 1, 28, 28)
-            nn.Tanh()
+
+        self.encoder_fc_ = nn.Sequential(
+            nn.Linear(2048, 256),
+            nn.LeakyReLU(True)
         )
+
+        self.decoder_fc_ = nn.Sequential(
+            nn.Linear(256, 2048),
+            nn.LeakyReLU(True)
+        )
+
+        self.decoder_ = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.ConvTranspose2d(128, 64, (3, 3), stride=(2, 2), padding=1, output_padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(True),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.ConvTranspose2d(64, 32, (3, 3), stride=(2, 2), padding=1, output_padding=1),
+            nn.BatchNorm2d(32),
+            nn.LeakyReLU(True),
+
+            nn.Upsample(scale_factor=2, mode='nearest'),
+            nn.ConvTranspose2d(32, 16, (3, 3), stride=(2, 2), padding=1, output_padding=1),
+            nn.BatchNorm2d(16),
+            nn.LeakyReLU(True)
+        )
+
+        # define loss function parameters
+        mask = self.__create_loss_mask(peak=10.0, hz_flat=6000)[:256]
+        mask = np.tile(mask, (256, 1)).T
+        mask = torch.Tensor(mask)
+        self.loss_weight_mask_ = Variable(mask)
+        if torch.cuda.is_available():
+            self.loss_weight_mask_ = self.loss_weight_mask_.cuda()
+
+
+    def encode(self, x):
+        conv_code = self.encoder_(x)
+        conv_code = conv_code.view(conv_code.shape[0], -1)
+        return self.encoder_fc_(conv_code)
+
+
+    def decode(self, x):
+        dec_code = self.decoder_fc_(x)
+        dec_code = dec_code.view(dec_code.size(0), 128, 4, 4)
+        return self.decoder_(dec_code)
 
 
     def forward(self, x):
-        encode = self.encoder(x)
-        decode = self.decoder(encode)
-        return encode, decode
+        encode = self.encode(x)
+        decode = self.decode(encode)
+        return decode
+
+
+    def loss(self, x, recon_x):
+        out = (x - recon_x) ** 2
+        out = out * self.loss_weight_mask_.expand_as(out)
+        loss = out.sum() # or sum over whatever dimensions
+        return loss
+
+
+    def __create_loss_mask(self, peak=10.0, hz_flat=6000, sr=48000, n_fft=1024):
+        n = int(n_fft / 2)
+        cutoff = np.where(librosa.core.fft_frequencies(sr=sr, n_fft=n_fft) >= hz_flat)[0][0]
+        mask = np.concatenate([np.linspace(peak, 1.0, cutoff), np.ones(n - cutoff)])
+        return mask
+
+
 
 
 def test_autoencoder():

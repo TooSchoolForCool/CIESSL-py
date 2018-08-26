@@ -3,20 +3,26 @@ import argparse
 import random
 
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
 
 
 class BatchLoader(object):
 
-    def __init__(self, data_dir, mode="all"):
-        self.__load_dataset(data_dir, mode)
+    def __init__(self, data_dir, mode="all", scaler=None):
+        self.dataset_ = self.__load_dataset(data_dir, mode, scaler)
 
 
-    def __load_dataset(self, data_dir, mode):
+    def __load_dataset(self, data_dir, mode, scaler):
         dataset = []
 
         for file in os.listdir(data_dir):
             if file.endswith(".pickle"):
                 data = np.load( os.path.join(data_dir, file) )
+                
+                if scaler is not None:
+                    data = scaler(data)
+                
                 dataset.append(data)
 
         if mode == "train":
@@ -25,7 +31,7 @@ class BatchLoader(object):
             rs.shuffle(idx)
             dataset = np.asarray(dataset)[idx[:20]]
 
-        self.dataset_ = dataset
+        return np.asarray(dataset)
 
 
     def size(self):
