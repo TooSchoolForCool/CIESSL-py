@@ -186,20 +186,37 @@ class VoiceConvAE(AutoEncoder):
         super(VoiceConvAE, self).__init__()
         
         self.encoder_ = nn.Sequential(
-            nn.Conv2d(16, 32, (3, 3), stride=(2, 2), padding=1),  # (b, 16, 10, 10)
-            nn.BatchNorm2d(32),
-            nn.LeakyReLU(True),
-            nn.MaxPool2d(2, 2),
-
-            nn.Conv2d(32, 64, (3, 3), stride=(2, 2), padding=1),  # (b, 16, 10, 10)
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(True),
-            nn.MaxPool2d(2, 2),
-
-            nn.Conv2d(64, 128, (3, 3), stride=(2, 2), padding=1),  # (b, 16, 10, 10)
+            nn.Conv2d(1, 128, (5, 5), stride=(2, 2)),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(True),
-            nn.MaxPool2d(2, 2),
+            # nn.MaxPool2d(2, 2),
+
+            nn.Conv2d(128, 128, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(True),
+
+            nn.Conv2d(128, 256, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(True),
+
+            nn.Conv2d(256, 256, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(True),
+
+            nn.Conv2d(256, 512, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(True),
+
+            nn.Conv2d(512, 512, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(True),
+
+            nn.Conv2d(512, 1024, (2, 2), stride=(2, 2)),
+            nn.BatchNorm2d(1024),
+            nn.LeakyReLU(True),
+
+            nn.Conv2d(1024, 1024, (1, 1), stride=(1, 1)),
+            nn.BatchNorm2d(1024),
         )
 
         self.encoder_fc_ = nn.Sequential(
@@ -213,25 +230,41 @@ class VoiceConvAE(AutoEncoder):
         )
 
         self.decoder_ = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.ConvTranspose2d(128, 64, (3, 3), stride=(2, 2), padding=1, output_padding=1),
-            nn.BatchNorm2d(64),
+            nn.ConvTranspose2d(1024, 1024, (1, 1), stride=(1, 1)),
+            nn.BatchNorm2d(1024),
             nn.LeakyReLU(True),
 
-            nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.ConvTranspose2d(64, 32, (3, 3), stride=(2, 2), padding=1, output_padding=1),
-            nn.BatchNorm2d(32),
+            nn.ConvTranspose2d(1024, 512, (2, 2), stride=(2, 2)),
+            nn.BatchNorm2d(512),
             nn.LeakyReLU(True),
 
-            nn.Upsample(scale_factor=2, mode='nearest'),
-            nn.ConvTranspose2d(32, 16, (3, 3), stride=(2, 2), padding=1, output_padding=1),
-            nn.BatchNorm2d(16),
-            nn.LeakyReLU(True)
+            nn.ConvTranspose2d(512, 512, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(True),
+
+            nn.ConvTranspose2d(512, 256, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(True),
+
+            nn.ConvTranspose2d(256, 256, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(True),
+
+            nn.ConvTranspose2d(256, 128, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(True),
+
+            nn.ConvTranspose2d(128, 128, (4, 4), stride=(2, 2)),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(True),
+
+            nn.ConvTranspose2d(128, 1, (5, 5), stride=(2, 2)),
+            nn.Sigmoid(),
         )
 
         # define loss function parameters
-        mask = self.__create_loss_mask(peak=10.0, hz_flat=6000)[:256]
-        mask = np.tile(mask, (256, 1)).T
+        mask = self.__create_loss_mask(peak=10.0, hz_flat=4000)[:255]
+        mask = np.tile(mask, (255, 1)).T
         mask = torch.Tensor(mask)
         self.loss_weight_mask_ = Variable(mask)
         if torch.cuda.is_available():
@@ -240,24 +273,26 @@ class VoiceConvAE(AutoEncoder):
 
     def encode(self, x):
         conv_code = self.encoder_(x)
-        conv_code = conv_code.view(conv_code.shape[0], -1)
-        return self.encoder_fc_(conv_code)
+        return conv_code
+
+        # conv_code = conv_code.view(conv_code.shape[0], -1)
+        # return self.encoder_fc_(conv_code)
 
 
     def decode(self, x):
-        dec_code = self.decoder_fc_(x)
-        dec_code = dec_code.view(dec_code.size(0), 128, 4, 4)
-        return self.decoder_(dec_code)
+        # dec_code = self.decoder_fc_(x)
+        # dec_code = dec_code.view(dec_code.size(0), 128, 4, 4)
+        return self.decoder_(x)
 
 
     def forward(self, x):
         encode = self.encode(x)
-        decode = self.decode(encode)
-        return decode
+        xhat = self.decode(encode)
+        return xhat
 
 
     def loss(self, x, recon_x):
-        out = (x - recon_x) ** 2
+        out = (x - recon_x) ** 2        
         out = out * self.loss_weight_mask_.expand_as(out)
         loss = out.sum() # or sum over whatever dimensions
         return loss

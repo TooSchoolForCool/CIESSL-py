@@ -159,8 +159,8 @@ def train_voice_ae(voice_data_dir, out_path):
 
 
 def train_voice_cae(voice_data_dir, out_path):
-    n_freq_bins = 256
-    n_time_bins = 256
+    n_freq_bins = 255
+    n_time_bins = 255
 
     def min_max_scaler(data):
         # log-scale transform
@@ -169,14 +169,19 @@ def train_voice_cae(voice_data_dir, out_path):
             min_val = np.amin(data[i])
             max_val = np.amax(data[i])
             data[i] = 1.0 * (data[i] - min_val) / (max_val - min_val)
-        return data[:, :n_freq_bins, :n_time_bins]
+        return data
 
-    bl = BatchLoader(voice_data_dir, scaler=min_max_scaler, mode="train")
+    def append_func(dataset, data):
+        for d in data:
+            dataset.append( [d[:n_freq_bins, :n_time_bins]] )
+        return dataset
 
-    num_epochs = 50000
-    batch_size = 8
+    bl = BatchLoader(voice_data_dir, scaler=min_max_scaler, mode="train", append_data=append_func)
+
+    num_epochs = 500000
+    batch_size = 4
     learning_rate = 1e-4
-    lr_decay_freq = 10
+    lr_decay_freq = 100
     save_frequency = 100
 
     model = VoiceConvAE()
@@ -201,7 +206,6 @@ def train_voice_cae(voice_data_dir, out_path):
             data = Variable(data)
             if torch.cuda.is_available():
                 data = data.cuda()
-
             # forward
             recon_batch = model(data)
             loss = model.loss(recon_batch, data)

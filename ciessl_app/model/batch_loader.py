@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 
 class BatchLoader(object):
 
-    def __init__(self, data_dir, mode="all", scaler=None):
-        self.dataset_ = self.__load_dataset(data_dir, mode, scaler)
+    def __init__(self, data_dir, mode="all", scaler=None, append_data=None):
+        self.dataset_ = self.__load_dataset(data_dir, mode, scaler, append_data)
 
 
-    def __load_dataset(self, data_dir, mode, scaler):
+    def __load_dataset(self, data_dir, mode, scaler, append_data):
         dataset = []
 
         for file in os.listdir(data_dir):
@@ -23,13 +23,16 @@ class BatchLoader(object):
                 if scaler is not None:
                     data = scaler(data)
                 
-                dataset.append(data)
+                if append_data is not None:
+                    dataset = append_data(dataset, data)
+                else:
+                    dataset.append(data)
 
         if mode == "train":
             idx = np.arange( len(dataset) )
             rs = np.random.RandomState(0)
             rs.shuffle(idx)
-            dataset = np.asarray(dataset)[idx[:20]]
+            dataset = np.asarray(dataset)[idx[:24]]
 
         return np.asarray(dataset)
 
