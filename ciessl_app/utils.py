@@ -66,7 +66,6 @@ def load_encoder_model(cfg_path):
     data = json.loads(json_file)
 
     encoder_type = data["encoder_type"]
-    nn_structure = data["nn_structure"]
 
     # reconstruct model params file directory
     cwd = os.getcwd().split("/") + cfg_path.split("/")
@@ -75,9 +74,9 @@ def load_encoder_model(cfg_path):
 
     encoder = None
     if encoder_type == "VoiceEncoder":
-        encoder = VoiceEncoder(nn_structure=nn_structure)
+        encoder = VoiceEncoder(nn_structure=data["nn_structure"])
     elif encoder_type == "VoiceVAE":
-        encoder = VoiceVAE(nn_structure=nn_structure)
+        encoder = VoiceVAE(nn_structure=data["nn_structure"])
     else:
         print("[ERROR] utils.load_encoder_model(): do not support encoder type: {}".format(encoder_type))
         raise

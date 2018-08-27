@@ -28,13 +28,18 @@ class BatchLoader(object):
                 else:
                     dataset.append(data)
 
-        if mode == "train":
-            idx = np.arange( len(dataset) )
-            rs = np.random.RandomState(0)
-            rs.shuffle(idx)
-            dataset = np.asarray(dataset)[idx[:24]]
+        idx = np.arange( len(dataset) )
+        rs = np.random.RandomState(0)
+        rs.shuffle(idx)
 
-        return np.asarray(dataset)
+        if mode == "test":
+            dataset = np.asarray(dataset)[idx[:24]]
+        elif mode == "train":
+            dataset = np.asarray(dataset)[ idx[ : -int(len(dataset) / 10)] ]
+        else:
+            dataset = np.asarray(dataset)
+            
+        return dataset
 
 
     def size(self):

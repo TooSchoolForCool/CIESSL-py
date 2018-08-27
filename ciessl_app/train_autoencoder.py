@@ -181,7 +181,7 @@ def train_voice_cae(voice_data_dir, out_path):
     num_epochs = 500000
     batch_size = 4
     learning_rate = 1e-4
-    lr_decay_freq = 100
+    lr_decay_freq = 1000
     save_frequency = 100
 
     model = VoiceConvAE()
