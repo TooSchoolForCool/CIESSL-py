@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 import json
 
-from model.autoencoder import VoiceVAE, VoiceEncoder
+from model.autoencoder import VoiceVAE, VoiceEncoder, VoiceConvAE
 
 
 def show_flooding_map(map_data):
@@ -77,6 +77,8 @@ def load_encoder_model(cfg_path):
         encoder = VoiceEncoder(nn_structure=data["nn_structure"])
     elif encoder_type == "VoiceVAE":
         encoder = VoiceVAE(nn_structure=data["nn_structure"])
+    elif encoder_type == "VoiceConvAE":
+        encoder = VoiceConvAE()
     else:
         print("[ERROR] utils.load_encoder_model(): do not support encoder type: {}".format(encoder_type))
         raise

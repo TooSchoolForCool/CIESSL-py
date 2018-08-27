@@ -182,7 +182,7 @@ class VoiceVAE(AutoEncoder):
 
 
 class VoiceConvAE(AutoEncoder):
-    def __init__(self, nn_structure=[6000, 2000, 500, 100]):
+    def __init__(self):
         super(VoiceConvAE, self).__init__()
         
         self.encoder_ = nn.Sequential(

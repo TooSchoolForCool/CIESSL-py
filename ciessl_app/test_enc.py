@@ -43,25 +43,57 @@ def main():
     args = arg_parser()
 
     encoder = load_encoder_model(args.encoder)
-    dl = BatchLoader(args.dataset)
 
-    shift = 0.3
+    n_freq_bins = 255
+    n_time_bins = 255
 
-    for data in dl.load_batch(batch_size=1, flatten=False):
-        data = data.T  # frames (n_channels, n_samples)
-        data = data.flatten()
-        tensor_data = torch.Tensor(data)
-        tensor_data = Variable(tensor_data)
+    def min_max_scaler(data):
+        # log-scale transform
+        data = np.log10(data)
+        for i in range(data.shape[0]):
+            min_val = np.amin(data[i])
+            max_val = np.amax(data[i])
+            data[i] = 1.0 * (data[i] - min_val) / (max_val - min_val)
+        return data
+
+    def append_func(dataset, data):
+        for d in data:
+            dataset.append( [d[:n_freq_bins, :n_time_bins]] )
+        return dataset
+
+    dl = BatchLoader(args.dataset, scaler=min_max_scaler, mode="all", append_data=append_func)
+
+    for batch in dl.load_batch(batch_size=8, flatten=False):
+        data = torch.Tensor(batch)
+        data = Variable(data)
+
         if torch.cuda.is_available():
-            tensor_data = tensor_data.cuda()
+            data = data.cuda()
 
-        recon_data = encoder.forward(tensor_data)
-
+        recon_data = encoder.forward(data)
+    
         # convert code to numpy.ndarray (n_feature, )
         if torch.cuda.is_available():
             recon_data = recon_data.data.cpu().numpy()
         else:
             recon_data = recon_data.data.numpy()
+
+        for original, recon in zip(batch, recon_data):
+            plt.pcolormesh(original[0])
+            plt.ylabel('Frequency [Hz]')
+            plt.xlabel('Time [sec]')
+            plt.title("original")
+            plt.colorbar()
+            plt.show()
+
+            plt.pcolormesh(recon[0])
+            plt.ylabel('Frequency [Hz]')
+            plt.xlabel('Time [sec]')
+            plt.title("recon")
+            plt.colorbar()
+            plt.show()
+
+        exit(0)
 
         recon_data = map(lambda x:x+shift, recon_data)
 

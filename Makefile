@@ -37,4 +37,4 @@ train:
 		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf" --voice_feature="enc" \
 		--voice_encoder="./data/model/raw_voice_ae_1.json" --map_feature="flooding"
 test_enc:
-	python ciessl_app/test_enc.py --dataset="data/gccphat" --encoder_model="data/model/gccphat_ae_1.json"
+	python ciessl_app/test_enc.py --dataset="data/stft_data/amp" --encoder_model="data/model/stft_cae.json"
