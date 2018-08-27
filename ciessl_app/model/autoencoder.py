@@ -19,7 +19,7 @@ class AutoEncoder(nn.Module):
 
     def load(self, model_dir):
         if torch.cuda.is_available():
-            super(VoiceEncoder, self).cuda()
+            super(AutoEncoder, self).cuda()
             self.load_state_dict( torch.load(model_dir) )
             print("Load Model [{}] to GPU".format(model_dir))
         else:
