@@ -54,13 +54,36 @@ def arg_parser():
         required=True,
         help="output directory"
     )
+
+    parser.add_argument(
+        "--normalize",
+        dest="normalize",
+        action='store_true',
+        help="Normalize the data or not"
+    )
+    parser.set_defaults(normalize=False)
     
     args = parser.parse_args()
 
     return args
 
 
-def save_stft(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
+def normalize(spec, type):
+    """
+    Log-scale spectrum first, then scale every points into [0, 1] by adopting
+    Min-Max Scaler
+    """
+    if type == "amp":
+        spec = np.log10(spec)
+
+    min_val = np.amin(spec)
+    max_val = np.amax(spec)
+    spec = 1.0 * (spec - min_val) / (max_val - min_val)
+
+    return spec
+
+
+def save_stft(voice_data_dir, map_data_dir, pos_tf_dir, out_path, if_normalize=False):
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir)
 
     voice_cnt = 1
@@ -74,6 +97,11 @@ def save_stft(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
         for i in range(0, 16):
             freqs, time, amp, phase = stft(frames[:24000, i], samplerate, nfft=1024, 
                 segment_size=256, overlap_size=224)
+
+            if if_normalize:
+                amp = normalize(amp, type="amp")
+                phase = normalize(phase, type="phase")
+
             amp_stack.append(amp)
             phase_stack.append(phase)
 
@@ -102,7 +130,7 @@ def main():
         os.makedirs(args.out + "/phase")
 
     save_stft(voice_data_dir=args.voice, map_data_dir=args.map,
-        pos_tf_dir=args.config, out_path=args.out)
+        pos_tf_dir=args.config, out_path=args.out, if_normalize=args.normalize)
 
     
 if __name__ == '__main__':

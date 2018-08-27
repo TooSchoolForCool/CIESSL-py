@@ -22,7 +22,7 @@ voice_preprocess:
 
 save_stft:
 	python ciessl_app/tools/save_stft.py --voice="data/hand_vad_pickle" --map="data/map/bh9f_lab_map.json" \
-		--config="ciessl_app/config/bh9f_pos_tf.json" --out="data/stft_data"
+		--config="ciessl_app/config/bh9f_pos_tf.json" --out="data/normalized_stft_data" --normalize
 
 save_gccphat:
 	python ciessl_app/tools/save_gccphat.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json" \
