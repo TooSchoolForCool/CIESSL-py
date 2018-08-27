@@ -89,6 +89,8 @@ class Pipeline(object):
             sound_feature = self.__encode_voice(frame_stack)
         elif self.voice_feature_ == "gcc_enc":
             sound_feature = self.__encode_gcc(frame_stack, samplerate)
+        elif self.voice_feature_ == "conv_enc":
+            sound_feature = self.__conv_encode_voice(frame_stack, samplerate)
 
         ######################################################
         # Extract Map feature
@@ -161,6 +163,7 @@ class Pipeline(object):
             print("[ERROR] Pipeline.__check_autoencoder(): must initialize voice_encoder first")
             raise
 
+
     def __encode_gcc(self, frame_stack, samplerate):
         self.__check_autoencoder()
 
@@ -187,6 +190,44 @@ class Pipeline(object):
 
         return voice_code
 
+
+    def __conv_encode_voice(self, frame_stack, samplerate):
+        # calculate log-scale normalized stft
+        voice_stft = []
+        for i in range(0, 16):
+            _, _, amp, phase = stft(frame_stack[:24000, i], samplerate, nfft=1024, segment_size=256, 
+                overlap_size=224)
+            cropped = amp[:255, :255]
+            log_cropped = np.log10(cropped)
+            log_normalized_cropped = self.__min_max_scaler(log_cropped)
+            # each channel stft is a (1, 255, 255) tensor
+            voice_stft.append( [log_normalized_cropped] )
+        # convert to batch-form
+        voice_stft = np.asarray( voice_stft )
+
+        voice_stft = torch.Tensor(voice_stft)
+        voice_stft = Variable(voice_stft)
+        if torch.cuda.is_available():
+            voice_stft = voice_stft.cuda()
+
+        code = self.voice_encoder_.encode(voice_stft)
+        # flatten tensor (16, x, y, z) ===> (16, x*y*z)
+        code = code.view(code.size(0), -1)
+
+        # convert code to numpy.ndarray (n_feature, )
+        if torch.cuda.is_available():
+            code = code.data.cpu().numpy()
+        else:
+            code = code.data.numpy()
+
+        return code.flatten()
+
+
+    def __min_max_scaler(self, data):
+        min_val = np.amin(data)
+        max_val = np.amax(data)
+        data = 1.0 * (data - min_val) / (max_val - min_val)
+        return data
 
 
     def __product_mask(self, ma, mb, normalize=False):

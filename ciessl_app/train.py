@@ -53,7 +53,7 @@ def arg_parser():
         help="choose learning mode: [clf, reg]"
     )
 
-    voice_feature = ["gccphat", "stft", "enc", "gcc_enc"]
+    voice_feature = ["gccphat", "stft", "enc", "gcc_enc", "conv_enc"]
     parser.add_argument(
         "--voice_feature",
         dest="voice_feature",
@@ -99,7 +99,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
 
     voice_enc = None
 
-    if voice_feature in ["enc", "gcc_enc"]:
+    if voice_feature in ["enc", "gcc_enc", "conv_enc"]:
         voice_enc = utils.load_encoder_model(cfg_path=voice_encoder_path)
 
     pipe = Pipeline(
