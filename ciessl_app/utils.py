@@ -2,7 +2,7 @@ import random
 import os
 
 import numpy as np
-import cv2
+import torch, cv2
 import json
 
 from model.autoencoder import VoiceVAE, VoiceEncoder, VoiceConvAE

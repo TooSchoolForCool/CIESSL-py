@@ -4,7 +4,6 @@ import sys
 import json
 
 import numpy as np
-import cv2
 from sklearn.preprocessing import normalize
 
 sys.path.append(os.path.abspath(os.path.join("..")))

@@ -4,6 +4,8 @@
 
 # ignore all .wav file in example/
 examples/*.wav
+# ignore point cloud data
+*.ply
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
