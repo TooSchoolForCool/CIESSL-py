@@ -5,6 +5,7 @@ import Queue
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 
@@ -97,18 +98,16 @@ class Pipeline(object):
         ######################################################
         map_feature = None
 
-        # if self.map_feature_ == "flooding":
-        #     src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][src_room-1], 
-        #         map_data["boundary"], self.sound_fading_rate_)
-        #     mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
-        #         map_data["boundary"], self.mic_fading_rate_)
-        #     product_map = self.__product_mask(src_flooding_map, mic_flooding_map)
-        #     show_flooding_map(product_map)
-        #     map_feature = product_map.flatten()
+        if self.map_feature_ == "flooding":
+            mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
+                map_data["boundary"], self.mic_fading_rate_)
+            shrink_map = self.__shrink_map(mic_flooding_map, kernel_size=(5, 5))
+            map_feature = shrink_map.flatten()
 
-        # feature_vec = np.append(sound_feature, flatten_map)
+        feature_vec = np.append(sound_feature, map_feature)
 
-        X.append(sound_feature)
+        # X.append(sound_feature)
+        X.append(feature_vec)
         y.append(src_room)
 
         X = np.asarray(X)
@@ -352,6 +351,21 @@ class Pipeline(object):
         # gccphat_pattern[:, 0]: pair 0 gccphat feature
         gccphat_pattern = np.asarray(gccphat_pattern).T
         return gccphat_pattern
+
+
+    def __shrink_map(self, img, kernel_size=(3, 3)):
+        # reshape image in terms of pytorch conv requirements
+        img = img.astype(float)
+
+        # for ir, fr in zip(img, float_img):
+        #     for ip, fp in zip(ir, fr):
+        #         print(ip, fp)
+        #     exit(0)
+
+        img = torch.from_numpy(img.reshape((1, 1, img.shape[0], img.shape[1])))
+        img = F.max_pool2d(Variable(img), kernel_size=kernel_size)
+        img = img.data.squeeze().numpy().astype("uint8")
+        return img
 
 
 def test():
