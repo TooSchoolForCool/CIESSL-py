@@ -18,10 +18,20 @@ class Evaluator(object):
 
 
     def evaluate(self, y, predicted_y):
-        assert(len(y) == len(predicted_y))
+        try:
+            assert(len(y) == len(predicted_y))
+        except:
+            print("y: {}".format(y))
+            print("predicted_y: {}".format(predicted_y))
+            assert(len(y) == len(predicted_y))
 
         for target, predicted_prob in zip(y, predicted_y):
-            assert(len(predicted_prob) == self.n_rooms_)
+            try:
+                assert(len(predicted_prob) == self.n_rooms_)
+            except:
+                print("predicted_prob: {}".format(predicted_prob))
+                print("n_rooms: {}".format(self.n_rooms_))
+                assert(len(predicted_prob) == self.n_rooms_)
 
             ranking = self.__calc_room_ranking(predicted_prob)
             for rank, room_idx in enumerate(ranking):

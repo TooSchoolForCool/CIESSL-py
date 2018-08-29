@@ -22,15 +22,16 @@ class OnlineClassifier(object):
 
 
     def fit(self, X, y):
+        # add new-coming data into memory
+        self.__append2q(X, y)
+
+        X, y = self.__prep_training_set()
         self.lm_.fit(X, y)
 
 
     def partial_fit(self, X, y, classes=None, n_iter=10):
         # add new-coming data into memory
-        for x_ in X:
-            self.xq_.append(x_)
-        for y_ in y:
-            self.yq_.append(y_)
+        self.__append2q(X, y)
 
         # initialize partial fit
         if classes is not None:
@@ -49,6 +50,13 @@ class OnlineClassifier(object):
 
     def predict(self, X):
         return self.lm_.predict(X)
+
+
+    def __append2q(self, X, y):
+        for x_ in X:
+            self.xq_.append(x_)
+        for y_ in y:
+            self.yq_.append(y_)
 
 
     def __prep_training_set(self):

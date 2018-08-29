@@ -98,16 +98,16 @@ class Pipeline(object):
         ######################################################
         map_feature = None
 
-        if self.map_feature_ == "flooding":
-            mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
-                map_data["boundary"], self.mic_fading_rate_)
-            shrink_map = self.__shrink_map(mic_flooding_map, kernel_size=(5, 5))
-            map_feature = shrink_map.flatten()
+        # if self.map_feature_ == "flooding":
+        #     mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
+        #         map_data["boundary"], self.mic_fading_rate_)
+        #     shrink_map = self.__shrink_map(mic_flooding_map, kernel_size=(5, 5))
+        #     map_feature = shrink_map.flatten()
 
-        feature_vec = np.append(sound_feature, map_feature)
+        # feature_vec = np.append(sound_feature, map_feature)
 
-        # X.append(sound_feature)
-        X.append(feature_vec)
+        X.append(sound_feature)
+        # X.append(feature_vec)
         y.append(src_room)
 
         X = np.asarray(X)
