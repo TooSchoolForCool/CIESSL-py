@@ -116,6 +116,79 @@ class Pipeline(object):
         return X, y
 
 
+    def prepare_ranking_data(self, map_data, voice_data):
+        """
+        This function is used to prepare training data, which acquiring map and voice 
+        data from DataLoader, and return corresponding feature vectors and lebals.
+
+        Args:
+            map_data (dictionary):
+                map_data["data"] ( np.ndarray (height, width) ): 2D room occupancy grid map,
+                    each item is an integer in range(0, N). 0 represents wall, and 1 ~ N 
+                    represents room index
+                map_data["n_room"] (int): number of rooms
+                map_data["origin"] ( tuple (int, int) ): the coordinate of the origin of the map
+                map_data["center"] ( list of 2-item tuple (x, y) ): each 2-item tuple
+                    represents a center of a room
+                map_data["boundary"] (dict): boundary information of the map, bottom-left corner,
+                    and the top-right corner
+            voice_data (dictionary):
+                voice_data["samplerate"] (int): samplerate of the voice data
+                voice_data["src"] (int, int): coordinate of the sound source in the map
+                voice_data["src_idx"] (int): sound source index
+                voice_data["dst"] (int, int): coordinate of the microphone in the map
+                voice_data["frames"] ( np.ndarray (n_samples, n_channels) ): 
+                    sound signal frames from every mic channel
+        Returns:
+            X ( np.array (n_samples, n_features) ): feature set
+            y ( np.array (n_samples,) ): label set
+        """
+        X = []
+        y = []
+
+        src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
+
+        ######################################################
+        # Extract sound feature
+        ######################################################
+        frame_stack = voice_data["frames"]
+        samplerate = voice_data["samplerate"]
+        sound_feature = None
+        
+        if self.voice_feature_ == "stft":
+            sound_feature = self.__extract_stft(frame_stack, samplerate)
+        elif self.voice_feature_ == "gccphat":
+            sound_feature = self.__extract_gccphat(frame_stack, samplerate).flatten()
+        elif self.voice_feature_ == "enc":
+            sound_feature = self.__encode_voice(frame_stack)
+        elif self.voice_feature_ == "gcc_enc":
+            sound_feature = self.__encode_gcc(frame_stack, samplerate)
+        elif self.voice_feature_ == "conv_enc":
+            sound_feature = self.__conv_encode_voice(frame_stack, samplerate)
+
+        ######################################################
+        # Extract Map feature
+        ######################################################
+        map_feature = None
+
+        if self.map_feature_ == "flooding":
+            for i in range(1, map_data["n_room"] + 1):
+                src_flooding_map = self.__flooding_map(map_data["data"], map_data["center"][i - 1],
+                    map_data["boundary"], self.sound_fading_rate_)
+                shrink_map = self.__shrink_map(src_flooding_map, kernel_size=(5, 5))
+                map_feature = shrink_map.flatten()
+
+                feature_vec = np.append(sound_feature, map_feature)
+                
+                X.append(feature_vec)
+                y.append(1 if i == src_room else 0)
+        
+        X = np.asarray(X)
+        y = np.asarray(y)
+
+        return X, y
+
+
     def __encode_voice(self, frame_stack):
         """
         Calculate gccphat pattern
@@ -356,12 +429,6 @@ class Pipeline(object):
     def __shrink_map(self, img, kernel_size=(3, 3)):
         # reshape image in terms of pytorch conv requirements
         img = img.astype(float)
-
-        # for ir, fr in zip(img, float_img):
-        #     for ip, fp in zip(ir, fr):
-        #         print(ip, fp)
-        #     exit(0)
-
         img = torch.from_numpy(img.reshape((1, 1, img.shape[0], img.shape[1])))
         img = F.max_pool2d(Variable(img), kernel_size=kernel_size)
         img = img.data.squeeze().numpy().astype("uint8")

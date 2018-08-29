@@ -50,7 +50,7 @@ def arg_parser():
         dest="mode",
         type=str,
         required=True,
-        help="choose learning mode: [clf, reg]"
+        help="choose learning mode: [clf, rank]"
     )
 
     voice_feature = ["gccphat", "stft", "enc", "gcc_enc", "conv_enc"]
@@ -93,8 +93,8 @@ def arg_parser():
 
 def init_pipeline(voice_feature, map_feature, voice_encoder_path):
     n_frames=6000
-    sound_fading_rate=0.999
-    mic_fading_rate=0.993
+    sound_fading_rate=0.996
+    mic_fading_rate=0.996
     gccphat_size=25
 
     voice_enc = None
@@ -122,8 +122,8 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
 
     # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
-    rank_svm = MLPClassifier(solver="adam")
-    l2r = OnlineClassifier(rank_svm, q_size=50, shuffle=True)
+    clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
+    l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
@@ -143,7 +143,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
             init_training_y = np.append(init_training_y, y, axis=0)
 
     classes = [i for i in range(1, map_data["n_room"] + 1)]
-    l2r.partial_fit(init_training_X, init_training_y, classes=classes)
+    l2r.partial_fit(init_training_X, init_training_y, classes=classes, n_iter=10)
     # l2r.fit(init_training_X, init_training_y)
 
     cnt = 1
@@ -160,7 +160,61 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         print("pred:\t%r" % (predicted_y))
         print("acc: %r" % (evaluator.get_eval_result()))
 
-        l2r.partial_fit(X, y)
+        l2r.partial_fit(X, y, n_iter=10)
+        cnt += 1
+
+    evaluator.plot_acc_history()
+
+
+def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
+    map_feature, voice_encoder_path):
+    """
+    Treat the task as a classification problem.
+    """
+
+    # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
+    clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
+    l2r = OnlineClassifier(clf, q_size=20, shuffle=True)
+
+    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
+    map_data = dl.load_map_info()
+
+    pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
+
+    # preparing init training set
+    init_training_X = None
+    init_training_y = None
+    for voice in dl.voice_data_iterator(n_samples=5, seed=0):
+        X, y = pipe.prepare_ranking_data(map_data, voice)
+        if init_training_X is None:
+            init_training_X = X
+            init_training_y = y
+        else:
+            init_training_X = np.append(init_training_X, X, axis=0)
+            init_training_y = np.append(init_training_y, y, axis=0)
+
+    classes = [0, 1]
+    l2r.partial_fit(init_training_X, init_training_y, classes=classes, n_iter=10)
+
+    cnt = 1
+    acc = 0
+    evaluator = Evaluator(map_data["n_room"])
+    for voice in dl.voice_data_iterator(seed=7):
+        # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
+        X, y = pipe.prepare_ranking_data(map_data, voice) 
+        predicted_y = l2r.predict(X)
+
+        # evaluator.evaluate(y, predicted_y)
+
+        print("Sample %d" % cnt)
+        print("y:\t%r" % (y))
+        print("pred:\t%r" % (predicted_y))
+
+        if list(y) == list(predicted_y):
+            acc += 1
+        print("acc: %r" % (1.0 * acc / cnt))
+
+        l2r.partial_fit(X, y, n_iter=10)
         cnt += 1
 
     evaluator.plot_acc_history()
@@ -173,8 +227,10 @@ def train_model():
         classification_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder)
-    elif args.mode == "reg":
-        pass
+    elif args.mode == "rank":
+        ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
+            pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
+            voice_encoder_path=args.voice_encoder)
 
 
 if __name__ == '__main__':

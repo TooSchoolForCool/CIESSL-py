@@ -47,6 +47,10 @@ class OnlineClassifier(object):
         return self.lm_.predict_proba(X)
 
 
+    def predict(self, X):
+        return self.lm_.predict(X)
+
+
     def __prep_training_set(self):
         """
         Shuffling dataset
