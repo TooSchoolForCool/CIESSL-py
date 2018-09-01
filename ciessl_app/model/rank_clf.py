@@ -20,9 +20,14 @@ class RankCLF(object):
 
 
     def rbf_kernel_(self, x1, x2):
-        sigma = 1.0
-        dist = np.linalg.norm(x1 - x2) ** 2
-        return np.exp( -(dist / (2 * sigma)) )
+        sigma = 10.0
+        dist = np.linalg.norm(x1 - x2, 2) ** 2
+        rbf = np.exp( -(dist / (2 * sigma)) )
+        # print(x1)
+        # print(x2)
+        # print(dist)
+        # print(rbf)
+        return rbf
 
 
     def fit(self, X, y):
@@ -39,8 +44,8 @@ class RankCLF(object):
         alpha = np.asarray(alpha)
 
         for iter in range(0, n_iter):
-            print("iter {}".format(iter))
             for i in range(0, n_samples):
+                # print("sample {}".format(i))
                 _lambda = self.calc_lambda_(alpha, X, y, i)
                 # update alpha vector for sample i
                 for k in range(0, K):
@@ -51,6 +56,8 @@ class RankCLF(object):
         self.coef_ = alpha
         self.train_X_ = X
         self.train_y_ = y
+
+        # print("training is done: {}".format(self.coef_))
         
 
     def predict(self, X):
@@ -78,15 +85,15 @@ class RankCLF(object):
 
 
     def calc_lambda_(self, alpha, X, y, i):
-        a = -0.5
-        b = 0.5
+        if(self.calc_g_lambda_(alpha, X, y, i, 0) >= 0):
+            a = -999.0
+            b = 0.0
+        if(self.calc_g_lambda_(alpha, X, y, i, 0) <= 0):
+            a = 0.0
+            b = 999.0
 
-        # find lower_bound
-        while(self.calc_g_lambda_(alpha, X, y, i, a) >= 0):
-            a *= 2
-        # find upper bound
-        while(self.calc_g_lambda_(alpha, X, y, i, b) <= 0):
-            b *= 2
+        assert(self.calc_g_lambda_(alpha, X, y, i, a) <= 0)
+        assert(self.calc_g_lambda_(alpha, X, y, i, b) >= 0)
 
         max_iter = 1000
         TOL = 1e-5
