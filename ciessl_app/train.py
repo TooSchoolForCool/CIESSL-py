@@ -13,6 +13,7 @@ from model.pipeline import Pipeline
 from model.evaluator import Evaluator
 from model.autoencoder import VoiceVAE, VoiceEncoder
 from model.online_clf import OnlineClassifier
+from model.rank_clf import RankCLF
 import utils
 
 
@@ -122,12 +123,8 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
     Treat the task as a classification problem.
     """
-
-    # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
-    # clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
-    # clf = MLkNN(k=10)
-    clf = MLARAM(vigilance=0.9, threshold=0.02)
-    l2r = OnlineClassifier(clf, q_size=30, shuffle=True)
+    clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
+    l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
@@ -139,21 +136,12 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     init_training_y = None
     for voice in dl.voice_data_iterator(n_samples=10, seed=0):
         X, y = pipe.prepare_training_data(map_data, voice)
-
-        new_y = []
-        for i in range(1, map_data["n_room"] + 1):
-            new_y.append(1 if i == y else 0)
-        y = np.asarray([new_y])
-        # print(y.shape)
-
         if init_training_X is None:
             init_training_X = X
             init_training_y = y
         else:
             init_training_X = np.append(init_training_X, X, axis=0)
             init_training_y = np.append(init_training_y, y, axis=0)
-
-        # print(init_training_y)
 
     classes = [i for i in range(1, map_data["n_room"] + 1)]
     print(init_training_X.shape)
@@ -166,25 +154,20 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice)
-        
-        new_y = []
-        for i in range(1, map_data["n_room"] + 1):
-            new_y.append(1 if i == y else 0)
-        new_y = np.asarray([new_y])
 
         # predicted_y = l2r.predict_proba(X).todense()
         # predicted_y = np.asarray(predicted_y)
         predicted_y = l2r.predict_proba(X)
 
-        evaluator.evaluate(y, predicted_y)
-
         print("Sample %d" % cnt)
         print("y:\t%r" % (y))
         print("pred:\t {}".format(predicted_y))
+
+        evaluator.evaluate(y, predicted_y)
         print("acc: %r" % (evaluator.get_eval_result()))
 
         # l2r.partial_fit(X, y, n_iter=10)
-        l2r.fit(X, new_y)
+        l2r.fit(X, y)
         cnt += 1
 
     evaluator.plot_acc_history()
@@ -195,11 +178,11 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
     Treat the task as a classification problem.
     """
-
-    # rank_svm = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
-    # clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
+    clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     clf = MLkNN(k=10)
-    l2r = OnlineClassifier(clf, q_size=20, shuffle=True)
+    clf = MLARAM(vigilance=0.9, threshold=0.02)
+    # clf = RankCLF(n_classes=4, C=1.0, n_iter=1)
+    l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
@@ -210,7 +193,13 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     init_training_X = None
     init_training_y = None
     for voice in dl.voice_data_iterator(n_samples=5, seed=0):
-        X, y = pipe.prepare_ranking_data(map_data, voice)
+        X, y = pipe.prepare_training_data(map_data, voice)
+        
+        new_y = []
+        for i in range(1, map_data["n_room"] + 1):
+            new_y.append(1 if i == y else -1)
+        y = np.asarray([new_y])
+
         if init_training_X is None:
             init_training_X = X
             init_training_y = y
@@ -223,25 +212,29 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     l2r.fit(init_training_X, init_training_y)
 
     cnt = 1
-    acc = 0
     evaluator = Evaluator(map_data["n_room"])
     for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
-        X, y = pipe.prepare_ranking_data(map_data, voice) 
-        predicted_y = l2r.predict(X)
+        X, y = pipe.prepare_training_data(map_data, voice)
 
-        # evaluator.evaluate(y, predicted_y)
+        new_y = []
+        for i in range(1, map_data["n_room"] + 1):
+            new_y.append(1 if i == y else -1)
+        new_y = np.asarray([new_y])
+
+        # predicted_y = l2r.predict_proba(X).todense()
+        # predicted_y = np.asarray(predicted_y)
+        predicted_y = l2r.predict_proba(X)
 
         print("Sample %d" % cnt)
         print("y:\t%r" % (y))
-        print("pred:\t%r" % (predicted_y))
+        print("pred:\t {}".format(predicted_y[0]))
 
-        if list(y) == list(predicted_y):
-            acc += 1
-        print("acc: %r" % (1.0 * acc / cnt))
+        evaluator.evaluate(y, predicted_y)
+        print("acc: %r" % (evaluator.get_eval_result()))
 
         # l2r.partial_fit(X, y, n_iter=10)
-        l2r.fit(X, y)
+        l2r.fit(X, new_y)
         cnt += 1
 
     evaluator.plot_acc_history()
