@@ -46,11 +46,11 @@ class RankCLF(object):
         for iter in range(0, n_iter):
             for i in range(0, n_samples):
                 # print("sample {}".format(i))
-                _lambda = self.calc_lambda_(alpha, X, y, i)
+                _lambda = self.calc_lambda_(alpha, X, y, i, k_mat)
                 # update alpha vector for sample i
                 for k in range(0, K):
-                    new_val = (1 + _lambda*y[i, k] - 0.5 * y[i, k] * self.leave_one_out_predict_(alpha, X, y, i, k)) \
-                        / self.kernel_(X[i], X[i])
+                    new_val = (1 + _lambda*y[i, k] - 0.5 * y[i, k] \
+                        * self.leave_one_out_predict_(alpha, X, y, i, k, k_mat)) / k_mat[i, i]
                     alpha[i, k] = self.project_func_(0, C, new_val)
 
         self.coef_ = alpha
@@ -84,23 +84,23 @@ class RankCLF(object):
         return np.asarray(y_proba)
 
 
-    def calc_lambda_(self, alpha, X, y, i):
-        if(self.calc_g_lambda_(alpha, X, y, i, 0) >= 0):
+    def calc_lambda_(self, alpha, X, y, i, k_mat):
+        if(self.calc_g_lambda_(alpha, X, y, i, 0, k_mat) >= 0):
             a = -999.0
             b = 0.0
-        if(self.calc_g_lambda_(alpha, X, y, i, 0) <= 0):
+        if(self.calc_g_lambda_(alpha, X, y, i, 0, k_mat) <= 0):
             a = 0.0
             b = 999.0
 
-        assert(self.calc_g_lambda_(alpha, X, y, i, a) <= 0)
-        assert(self.calc_g_lambda_(alpha, X, y, i, b) >= 0)
+        assert(self.calc_g_lambda_(alpha, X, y, i, a, k_mat) <= 0)
+        assert(self.calc_g_lambda_(alpha, X, y, i, b, k_mat) >= 0)
 
         max_iter = 1000
         TOL = 1e-5
 
         for _ in range(max_iter):
             c = (a + b) / 2
-            f_val = self.calc_g_lambda_(alpha, X, y, i, c)
+            f_val = self.calc_g_lambda_(alpha, X, y, i, c, k_mat)
 
             if f_val == 0:
                 return c
@@ -115,14 +115,14 @@ class RankCLF(object):
         return (a + b) / 2
 
 
-    def calc_g_lambda_(self, alpha, X, y, i, _lambda):
+    def calc_g_lambda_(self, alpha, X, y, i, _lambda, k_mat):
         K = self.n_classes_
         C = self.C_
 
         val = 0.0
         for k in range(0, K):
-            hx = (y[i, k] + _lambda - 0.5 * self.leave_one_out_predict_(alpha, X, y, i, k)) \
-                / self.kernel_(X[i], X[i])
+            hx = (y[i, k] + _lambda - 0.5 * self.leave_one_out_predict_(alpha, X, y, i, k, k_mat)) \
+                / k_mat[i, i]
             hy = y[i, k] * C
 
             val += self.h_func_(hx, hy)
@@ -179,7 +179,7 @@ class RankCLF(object):
         return np.asarray(rank)
 
 
-    def leave_one_out_predict_(self, alpha, X, y, i, k):
+    def leave_one_out_predict_(self, alpha, X, y, i, k, k_mat):
         """
         Args:
             alpha nd.array(n_samples, n_classes): alpha matrix
@@ -194,7 +194,7 @@ class RankCLF(object):
         for j in range(0, n):
             if i == j:
                 continue
-            score += self.kernel_(X[j], X[i]) * alpha[j, k] * y[j, k]
+            score += k_mat[j, i] * alpha[j, k] * y[j, k]
 
         return score
 
