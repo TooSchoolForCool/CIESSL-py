@@ -51,6 +51,32 @@ class RankFOGD(object):
         self.u_ = u
 
 
+    def predict(self, X):
+        K = self.n_classes_
+        labels = []
+
+        for x in X:
+            zx = self.fourier_repr_(x, self.u_)
+            score = self.calc_score_(self.w_, zx)
+
+            idx = np.argmax(score)
+            label = [1 if k == idx else -1 for k in range(0, K)]
+            labels.append(label)
+
+        return labels
+
+
+    def predict_proba(self, X):
+        y_proba = []
+
+        for x in X:
+            zx = self.fourier_repr_(x, self.u_)
+            rank_score = self.calc_score_(self.w_, zx)
+            y_proba.append(rank_score)
+
+        return np.asarray(y_proba)
+
+
     def fourier_repr_(self, x, u):
         # transform feature to Fourier space
         cos_ux = np.cos(np.dot(u.T, x))
@@ -96,21 +122,7 @@ class RankFOGD(object):
 
     def calc_score_(self, w, zx):
         return np.dot(w, zx)
-
-
-    def predict(self, X):
-        K = self.n_classes_
-        labels = []
-
-        for x in X:
-            zx = self.fourier_repr_(x, self.u_)
-            score = self.calc_score_(self.w_, zx)
-
-            idx = np.argmax(score)
-            label = [1 if k == idx else -1 for k in range(0, K)]
-            labels.append(label)
-
-        return labels
+        
 
 
 def read_data_set(file_path, n_samples=None):

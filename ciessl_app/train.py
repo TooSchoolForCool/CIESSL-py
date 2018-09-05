@@ -14,6 +14,7 @@ from model.evaluator import Evaluator
 from model.autoencoder import VoiceVAE, VoiceEncoder
 from model.online_clf import OnlineClassifier
 from model.rank_clf import RankCLF
+from model.rank_fogd import RankFOGD
 import utils
 
 
@@ -178,11 +179,12 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
     Treat the task as a classification problem.
     """
-    clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
-    clf = MLkNN(k=10)
-    clf = MLARAM(vigilance=0.9, threshold=0.02)
+    # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
+    # clf = MLkNN(k=10)
+    # clf = MLARAM(vigilance=0.9, threshold=0.02)
     # clf = RankCLF(n_classes=4, C=1.0, n_iter=1)
-    l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
+    clf = RankFOGD(n_classes=4, eta=1e-3, D=1000, sigma=10.0)
+    l2r = OnlineClassifier(clf, q_size=20, shuffle=True)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
@@ -208,8 +210,11 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
             init_training_y = np.append(init_training_y, y, axis=0)
 
     classes = [0, 1]
+    print(init_training_X.shape)
+    print(init_training_y.shape)
     # l2r.partial_fit(init_training_X, init_training_y, classes=classes, n_iter=10)
-    l2r.fit(init_training_X, init_training_y)
+    # l2r.fit(init_training_X, init_training_y)
+    l2r.partial_fit(init_training_X, init_training_y, n_iter=10)
 
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
@@ -233,8 +238,8 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         evaluator.evaluate(y, predicted_y)
         print("acc: %r" % (evaluator.get_eval_result()))
 
-        # l2r.partial_fit(X, y, n_iter=10)
-        l2r.fit(X, new_y)
+        l2r.partial_fit(X, new_y, n_iter=10)
+        # l2r.fit(X, new_y)
         cnt += 1
 
     evaluator.plot_acc_history()

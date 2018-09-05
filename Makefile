@@ -34,7 +34,7 @@ train_autoencoder:
 
 train:
 	python ciessl_app/train.py --voice_data="data/active_voice" --map_data="data/map/bh9f_lab_map.json" \
-		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="clf" --voice_feature="conv_enc" \
+		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="rank" --voice_feature="conv_enc" \
 		--voice_encoder="./data/model/stft_cae.json" --map_feature="flooding"
 test_enc:
 	python ciessl_app/test_enc.py --dataset="data/stft_data/amp" --encoder_model="data/model/stft_cae.json"
