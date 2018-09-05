@@ -181,10 +181,10 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
     # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     # clf = MLkNN(k=10)
-    # clf = MLARAM(vigilance=0.9, threshold=0.02)
+    clf = MLARAM(vigilance=0.9, threshold=0.02)
     # clf = RankCLF(n_classes=4, C=1.0, n_iter=1)
-    clf = RankFOGD(n_classes=4, eta=1e-3, D=1000, sigma=10.0)
-    l2r = OnlineClassifier(clf, q_size=20, shuffle=True)
+    # clf = RankFOGD(n_classes=4, eta=1e-3, D=10000, sigma=10.0)
+    l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
@@ -194,7 +194,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     # preparing init training set
     init_training_X = None
     init_training_y = None
-    for voice in dl.voice_data_iterator(n_samples=5, seed=0):
+    for voice in dl.voice_data_iterator(n_samples=2, seed=0):
         X, y = pipe.prepare_training_data(map_data, voice)
         
         new_y = []
@@ -209,12 +209,12 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
             init_training_X = np.append(init_training_X, X, axis=0)
             init_training_y = np.append(init_training_y, y, axis=0)
 
-    classes = [0, 1]
+    classes = [i for i in range(1, map_data["n_room"] + 1)]
     print(init_training_X.shape)
     print(init_training_y.shape)
-    # l2r.partial_fit(init_training_X, init_training_y, classes=classes, n_iter=10)
-    # l2r.fit(init_training_X, init_training_y)
-    l2r.partial_fit(init_training_X, init_training_y, n_iter=10)
+    # l2r.partial_fit(init_training_X, init_training_y, classes=classes, n_iter=5)
+    l2r.fit(init_training_X, init_training_y)
+    # l2r.partial_fit(init_training_X, init_training_y, n_iter=5)
 
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
@@ -238,8 +238,8 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         evaluator.evaluate(y, predicted_y)
         print("acc: %r" % (evaluator.get_eval_result()))
 
-        l2r.partial_fit(X, new_y, n_iter=10)
-        # l2r.fit(X, new_y)
+        # l2r.partial_fit(X, y, n_iter=5)
+        l2r.fit(X, new_y)
         cnt += 1
 
     evaluator.plot_acc_history()

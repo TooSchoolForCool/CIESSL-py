@@ -78,7 +78,7 @@ def load_encoder_model(cfg_path):
     elif encoder_type == "VoiceVAE":
         encoder = VoiceVAE(nn_structure=data["nn_structure"])
     elif encoder_type == "VoiceConvAE":
-        encoder = VoiceConvAE()
+        encoder = VoiceConvAE(code_size=data["code_size"])
     else:
         print("[ERROR] utils.load_encoder_model(): do not support encoder type: {}".format(encoder_type))
         raise

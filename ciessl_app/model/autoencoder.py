@@ -182,7 +182,7 @@ class VoiceVAE(AutoEncoder):
 
 
 class VoiceConvAE(AutoEncoder):
-    def __init__(self):
+    def __init__(self, code_size=256):
         super(VoiceConvAE, self).__init__()
         
         self.encoder_ = nn.Sequential(
@@ -215,8 +215,8 @@ class VoiceConvAE(AutoEncoder):
             nn.BatchNorm2d(1024),
             nn.LeakyReLU(True),
 
-            nn.Conv2d(1024, 1024, (1, 1), stride=(1, 1)),
-            nn.BatchNorm2d(1024),
+            nn.Conv2d(1024, code_size, (1, 1), stride=(1, 1)),
+            nn.BatchNorm2d(code_size),
         )
 
         self.encoder_fc_ = nn.Sequential(
@@ -230,7 +230,7 @@ class VoiceConvAE(AutoEncoder):
         )
 
         self.decoder_ = nn.Sequential(
-            nn.ConvTranspose2d(1024, 1024, (1, 1), stride=(1, 1)),
+            nn.ConvTranspose2d(code_size, 1024, (1, 1), stride=(1, 1)),
             nn.BatchNorm2d(1024),
             nn.LeakyReLU(True),
 

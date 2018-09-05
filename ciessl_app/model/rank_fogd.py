@@ -122,7 +122,7 @@ class RankFOGD(object):
 
     def calc_score_(self, w, zx):
         return np.dot(w, zx)
-        
+
 
 
 def read_data_set(file_path, n_samples=None):
