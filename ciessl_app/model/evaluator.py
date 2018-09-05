@@ -92,8 +92,8 @@ class Evaluator(object):
                 ranking[0] indicates the highest priority
         """
         # calculate normalized probability of each room
-        total = np.sum(predicted_y)
-        predicted_y /= total
+        # total = np.sum(predicted_y)
+        # predicted_y /= total
 
         ranking_tuple = [(i + 1, predicted_y[i]) for i in range(0, len(predicted_y))]
         ranking_tuple.sort(key=lambda v : v[1], reverse=True)
