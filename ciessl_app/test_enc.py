@@ -2,6 +2,7 @@ import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
+import librosa
 import torch
 from torch.autograd import Variable
 
@@ -60,10 +61,15 @@ def main():
         for d in data:
             dataset.append( [d[:n_freq_bins, :n_time_bins]] )
         return dataset
+    
+    freq = librosa.core.fft_frequencies(sr=48000, n_fft=1024)
+    freq_bins = [int(freq[i]) for i in range(0, n_freq_bins)]
+    freq_bins[-1] = 12000
+    time_bins = [i for i in range(0, n_time_bins)]
 
     dl = BatchLoader(args.dataset, scaler=min_max_scaler, mode="all", append_data=append_func)
 
-    for batch in dl.load_batch(batch_size=8, flatten=False):
+    for batch in dl.load_batch(batch_size=16, flatten=False, suffle=False):
         data = torch.Tensor(batch)
         data = Variable(data)
 
@@ -78,20 +84,40 @@ def main():
         else:
             recon_data = recon_data.data.numpy()
 
+        cnt = 1
         for original, recon in zip(batch, recon_data):
-            plt.pcolormesh(original[0])
-            plt.ylabel('Frequency [Hz]')
-            plt.xlabel('Time [sec]')
-            plt.title("original")
-            plt.colorbar()
-            plt.show()
+            # # spectrum only
+            # ax = plt.axes([0,0,1,1], frameon=False)
+            # ax.get_xaxis().set_visible(False)
+            # ax.get_yaxis().set_visible(False)
+            # plt.xlim(0, 255)
+            # plt.ylim(0, 255)
+            # frames = plt.pcolormesh(original[0])
+            # plt.savefig("origin_spec_" + str(cnt) + ".png", transparent=True, dpi=300)
+            # plt.clf()
 
-            plt.pcolormesh(recon[0])
+            plt.pcolormesh(time_bins, freq_bins, recon[0])
             plt.ylabel('Frequency [Hz]')
             plt.xlabel('Time [sec]')
-            plt.title("recon")
+            plt.xlim(0, 255)
+            # plt.title("Reconstructed Spectrum")
             plt.colorbar()
-            plt.show()
+            # plt.show()
+            plt.savefig("origin_" + str(cnt) + ".png", transparent=True, dpi=300)
+            plt.clf()
+
+            plt.pcolormesh(time_bins, freq_bins, recon[0])
+            plt.ylabel('Frequency [Hz]')
+            plt.xlabel('Time [sec]')
+            plt.xlim(0, 255)
+            # plt.title("Reconstructed Spectrum")
+            plt.colorbar()
+            # plt.show()
+            plt.savefig("recon_" + str(cnt) + ".png", transparent=True, dpi=300)
+            plt.clf()
+
+            print(cnt)
+            cnt += 1
 
         exit(0)
 

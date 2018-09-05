@@ -37,4 +37,5 @@ train:
 		--config="ciessl_app/config/bh9f_pos_tf.json" --mode="rank" --voice_feature="conv_enc" \
 		--voice_encoder="./data/model/stft_cae_subset_256.json" --map_feature="flooding"
 test_enc:
-	python ciessl_app/test_enc.py --dataset="data/stft_data/amp" --encoder_model="data/model/stft_cae.json"
+	python ciessl_app/test_enc.py --dataset="data/stft_data/train/amp" \
+		--encoder_model="data/model/stft_cae_subset.json"
