@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 class RankFOGD(object):
-    def __init__(self, n_classes, loss="hingh", C=1.0, D=1000, eta=1e-3, sigma=1.0):
+    def __init__(self, n_classes, loss="rank_hinge", C=1.0, D=1000, eta=1e-3, sigma=1.0):
         # number of types of classes
         self.n_classes_ = n_classes
         # relax coef in objective function
@@ -15,8 +15,10 @@ class RankFOGD(object):
         # rbf (gaussian) kernel width
         self.sigma_ = sigma
 
-        if loss == "hingh":
-            self.update_weights_ = self.hingh_loss_update_
+        if loss == "hinge":
+            self.update_weights_ = self.hinge_loss_update_
+        elif loss == "rank_hinge":
+            self.update_weights_ = self.rank_loss_update_
 
         # approx weight vector with shape (n_classes, D * 2)
         self.w_ = None
@@ -59,7 +61,25 @@ class RankFOGD(object):
         return zx
 
 
-    def hingh_loss_update_(self, w, score, y, zx):
+    def rank_loss_update_(self, w, score, y, zx):
+        K = self.n_classes_
+
+        for k in range(0, K):
+            for l in range(k, K):
+                if y[k] == y[l]:
+                    continue
+
+                delta_kl = 0.5 * (y[k] - y[l]) * (score[k] - score[l])
+                
+                # gradient max(0, 1 - delta_kl)
+                if delta_kl < 1:
+                    w[k] = w[k] + self.eta_ * 0.5*(y[k] - y[l]) * zx
+                    w[l] = w[l] - self.eta_ * 0.5*(y[k] - y[l]) * zx
+
+        return w
+
+
+    def hinge_loss_update_(self, w, score, y, zx):
         yt = np.argmax(y)
         # exclude yt index
         rest = [i for i in range(0, yt)] + [i for i in range(yt+1, self.n_classes_)]
