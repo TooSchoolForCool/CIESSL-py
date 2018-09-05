@@ -1,202 +1,96 @@
 import numpy as np
-import cvxpy as cvx
 import matplotlib.pyplot as plt
 
 
 class RankFOGD(object):
-    def __init__(self, n_classes, kernel="rbf", C=1.0, n_iter=1):
+    def __init__(self, n_classes, loss="hingh", C=1.0, D=1000, eta=1e-3, sigma=1.0):
+        # number of types of classes
         self.n_classes_ = n_classes
-
-        if kernel == "rbf":
-            self.kernel_ = self.rbf_kernel_
-
+        # relax coef in objective function
         self.C_ = C
-        self.n_iter_ = n_iter
+        # Fourier components size
+        self.D_ = D
+        # learning rate
+        self.eta_ = eta
+        # rbf (gaussian) kernel width
+        self.sigma_ = sigma
 
-        # ranking function params
-        self.coef_ = None
-        self.train_X_ = None
-        self.train_y_ = None
+        if loss == "hingh":
+            self.update_weights_ = self.hingh_loss_update_
 
-
-    def rbf_kernel_(self, x1, x2):
-        sigma = 10.0
-        dist = np.linalg.norm(x1 - x2, 2) ** 2
-        rbf = np.exp( -(dist / (2 * sigma)) )
-        # print(x1)
-        # print(x2)
-        # print(dist)
-        # print(rbf)
-        return rbf
+        # approx weight vector with shape (n_classes, D * 2)
+        self.w_ = None
+        # Fourier Components with shape (n_features, D)
+        self.u_ = None
 
 
-    def fit(self, X, y):
-        n_samples = X.shape[0]
-        K = self.n_classes_
-        C = self.C_
-        n_iter = self.n_iter_
+    def partial_fit(self, X, y):
+        if self.w_ is None:
+            self.w_ = np.zeros((self.n_classes_, self.D_*2))
+        if self.u_ is None:
+            self.u_ = (1.0 / self.sigma_) * np.random.randn(X.shape[1], self.D_)
 
-        # create kernel matrix
-        k_mat = self.create_kernel_mat_(X)
+        w = self.w_
+        u = self.u_
 
-        # create alpha matrix (n_samples, n_classes)
-        alpha = [[0.1 * C for _ in range(K)] for _ in range(n_samples)]
-        alpha = np.asarray(alpha)
+        for x_, y_ in zip(X, y):
+            assert(y_.shape[0] == self.n_classes_)
+            assert(x_.shape[0] == u.shape[0])
 
-        for iter in range(0, n_iter):
-            for i in range(0, n_samples):
-                # print("sample {}".format(i))
-                _lambda = self.calc_lambda_(alpha, X, y, i, k_mat)
-                # update alpha vector for sample i
-                for k in range(0, K):
-                    new_val = (1 + _lambda*y[i, k] - 0.5 * y[i, k] \
-                        * self.leave_one_out_predict_(alpha, X, y, i, k, k_mat)) / k_mat[i, i]
-                    alpha[i, k] = self.project_func_(0, C, new_val)
+            zx = self.fourier_repr_(x_, u)
 
-        self.coef_ = alpha
-        self.train_X_ = X
-        self.train_y_ = y
+            # calculate score for each class
+            score = self.calc_score_(w, zx)
+            # update weight vector
+            w = self.update_weights_(w, score, y_, zx)
 
-        # print("training is done: {}".format(self.coef_))
-        
+        # save weights and Fourier Components
+        self.w_ = w
+        self.u_ = u
+
+
+    def fourier_repr_(self, x, u):
+        # transform feature to Fourier space
+        cos_ux = np.cos(np.dot(u.T, x))
+        sin_ux = np.sin(np.dot(u.T, x))
+        # shape: (2 * D, )
+        zx = np.append(cos_ux, sin_ux)
+
+        return zx
+
+
+    def hingh_loss_update_(self, w, score, y, zx):
+        yt = np.argmax(y)
+        # exclude yt index
+        rest = [i for i in range(0, yt)] + [i for i in range(yt+1, self.n_classes_)]
+        st = np.argmax(score[rest])
+
+        loss = max( 0, 1 - (score[yt] - score[st]) )
+
+        if loss > 0:
+            w[yt] = w[yt] + self.eta_ * zx
+            w[st] = w[st] - self.eta_ * zx
+
+        return w
+
+
+    def calc_score_(self, w, zx):
+        return np.dot(w, zx)
+
 
     def predict(self, X):
-        labels = []
         K = self.n_classes_
+        labels = []
 
         for x in X:
-            rank = self.ranking_score(x)
-            idx = np.argmax(rank)
+            zx = self.fourier_repr_(x, self.u_)
+            score = self.calc_score_(self.w_, zx)
+
+            idx = np.argmax(score)
             label = [1 if k == idx else -1 for k in range(0, K)]
             labels.append(label)
 
         return labels
-
-
-
-    def predict_proba(self, X):
-        y_proba = []
-
-        for x in X:
-            rank = self.ranking_score(x)
-            y_proba.append(rank)
-
-        return np.asarray(y_proba)
-
-
-    def calc_lambda_(self, alpha, X, y, i, k_mat):
-        if(self.calc_g_lambda_(alpha, X, y, i, 0, k_mat) >= 0):
-            a = -999.0
-            b = 0.0
-        if(self.calc_g_lambda_(alpha, X, y, i, 0, k_mat) <= 0):
-            a = 0.0
-            b = 999.0
-
-        assert(self.calc_g_lambda_(alpha, X, y, i, a, k_mat) <= 0)
-        assert(self.calc_g_lambda_(alpha, X, y, i, b, k_mat) >= 0)
-
-        max_iter = 1000
-        TOL = 1e-5
-
-        for _ in range(max_iter):
-            c = (a + b) / 2
-            f_val = self.calc_g_lambda_(alpha, X, y, i, c, k_mat)
-
-            if f_val == 0:
-                return c
-            if (b - a) / 2 < TOL:
-                return c
-
-            if f_val < 0:
-                a = c
-            else:
-                b = c
-
-        return (a + b) / 2
-
-
-    def calc_g_lambda_(self, alpha, X, y, i, _lambda, k_mat):
-        K = self.n_classes_
-        C = self.C_
-
-        val = 0.0
-        for k in range(0, K):
-            hx = (y[i, k] + _lambda - 0.5 * self.leave_one_out_predict_(alpha, X, y, i, k, k_mat)) \
-                / k_mat[i, i]
-            hy = y[i, k] * C
-
-            val += self.h_func_(hx, hy)
-
-        return val
-
-
-    def h_func_(self, x, y):
-        if y > 0:
-            return self.project_func_(0, y, x)
-        else:
-            return self.project_func_(y, 0, x)
-
-
-    def project_func_(self, a, b, x):
-        if x > b:
-            return b
-        elif x < a:
-            return a
-        else:
-            return x
-
-
-    def sum_row_(self, M, row):
-        return np.sum(M[row, :])
-
-
-    def create_kernel_mat_(self, X):
-        n = X.shape[0]
-        k_mat = np.zeros((n, n))
-        
-        for i in range(0, n):
-            for j in range(i, n):
-                k_mat[j, i] = k_mat[i, j] = self.kernel_(X[i], X[j])
-
-        return k_mat
-
-
-    def ranking_score(self, x):
-        X = self.train_X_
-        y = self.train_y_
-        alpha = self.coef_
-        K = self.n_classes_
-        n = X.shape[0]
-
-        rank = []
-
-        for k in range(0, K):
-            score = 0.0
-            for i in range(0, n):
-                score += y[i, k] * alpha[i, k] * self.kernel_(X[i], x)
-            rank.append(score)
-
-        return np.asarray(rank)
-
-
-    def leave_one_out_predict_(self, alpha, X, y, i, k, k_mat):
-        """
-        Args:
-            alpha nd.array(n_samples, n_classes): alpha matrix
-            X (n_samples, n_features): training feature set
-            y binary matrix (n_samples, n_classes): training label set
-            i (int): target index
-            k (int): label index [0, n_classes]
-        """
-        score = 0.0
-        n = X.shape[0]
-
-        for j in range(0, n):
-            if i == j:
-                continue
-            score += k_mat[j, i] * alpha[j, k] * y[j, k]
-
-        return score
 
 
 def read_data_set(file_path, n_samples=None):
@@ -232,11 +126,11 @@ def test_cvx():
     y = [[1 if i == yi else -1 for i in range(1, 4)] for yi in y]
     y = np.asarray(y)
 
-    clf = RankCLF(n_classes=3)
-    clf.fit(X[:10], y[:10])
+    clf = RankFOGD(n_classes=3, eta=5e-4)
+    clf.partial_fit(X[:5], y[:5])
 
     acc = 0
-    for xi, yi in zip(X[10:], y[10:]):
+    for xi, yi in zip(X[5:], y[5:]):
         pred_y = clf.predict([xi])
 
         print("y:\t{}".format(yi))
@@ -246,7 +140,9 @@ def test_cvx():
             acc += 1
             print("hit: {}".format(acc))
 
-    print("acc: {}".format(1.0 * acc / (X.shape[0] - 10)))
+        clf.partial_fit([xi], [yi])
+
+    print("acc: {}".format(1.0 * acc / (X.shape[0] - 5)))
 
 
 if __name__ == '__main__':
