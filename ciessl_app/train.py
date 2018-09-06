@@ -86,6 +86,12 @@ def arg_parser():
         type=str,
         help="Output directory of robot exploration traces"
     )
+    parser.add_argument(
+        "--save_train_hist",
+        dest="save_train_hist",
+        type=str,
+        help="Output directory of training history"
+    )
 
     args = parser.parse_args()
 
@@ -126,7 +132,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
 
 
 def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace):
+    map_feature, voice_encoder_path, save_trace, save_history):
     """
     Treat the task as a classification problem.
     """
@@ -164,12 +170,14 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     if save_trace is not None:
         tracker.dump(save_trace)
-
+    if save_history is not None:
+        evaluator.save_history(out_dir="3room_history.csv", type="csv")
     evaluator.plot_acc_history()
+    
 
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace):
+    map_feature, voice_encoder_path, save_trace, save_history):
     """
     Treat the task as a ranking problem.
     """
@@ -186,21 +194,21 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     # preparing init training set
-    init_X, init_y = utils.init_training_set(dl, pipe, n_samples=5, seed=0, type="rank")
+    init_X, init_y = utils.init_training_set(dl, pipe, n_samples=1, seed=0, type="rank", n_labels=3)
     print(init_X.shape)
     print(init_y.shape)
 
-    classes = [i for i in range(1, map_data["n_room"] + 1)]
+    # classes = [i for i in range(1, map_data["n_room"] + 1)]
     # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=5)
     l2r.fit(init_X, init_y)
     # l2r.partial_fit(init_X, init_y, n_iter=5)
 
-    evaluator = Evaluator(map_data["n_room"], verbose=True)
+    evaluator = Evaluator(map_data["n_room"] - 1, verbose=True)
     tracker = TraceTracker(verbose=True)
-    for voice in dl.voice_data_iterator(seed=7):
+    for voice in dl.voice_data_iterator(seed=5):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice)
-        rank_y = utils.label2rank(label=y, n_labels=map_data["n_room"])
+        rank_y = utils.label2rank(label=y, n_labels=map_data["n_room"] - 1)
         
         predicted_y = l2r.predict_proba(X)
         evaluator.evaluate(y, predicted_y)
@@ -213,7 +221,8 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     if save_trace is not None:
         tracker.dump(save_trace)
-
+    if save_history is not None:
+        evaluator.save_history(out_dir="3room_history.csv", type="csv")
     evaluator.plot_acc_history()
 
 
@@ -223,11 +232,13 @@ def train_model():
     if args.mode == "clf":
         classification_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
-            voice_encoder_path=args.voice_encoder, save_trace=args.save_trace)
+            voice_encoder_path=args.voice_encoder, save_trace=args.save_trace, 
+            save_history=args.save_train_hist)
     elif args.mode == "rank":
         ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
-            voice_encoder_path=args.voice_encoder, save_trace=args.save_trace)
+            voice_encoder_path=args.voice_encoder, save_trace=args.save_trace,
+            save_history=args.save_train_hist)
 
 
 if __name__ == '__main__':

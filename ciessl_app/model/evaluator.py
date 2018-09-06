@@ -80,6 +80,16 @@ class Evaluator(object):
         plt.show()
 
 
+    def save_history(self, out_dir, type="csv"):
+        if type == "csv":
+            self.dump2csv(out_dir)
+
+
+    def dump2csv(self, out_dir):
+        np.savetxt(out_dir, self.acc_history_, delimiter=",")
+        print("[Evaluator]: Save history to file {}".format(out_dir))
+
+
     def find_target_room_(self, y):
         for i in range(0, self.n_rooms_):
             if y[i] == 1:
