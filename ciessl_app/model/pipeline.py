@@ -65,6 +65,7 @@ class Pipeline(object):
                 voice_data["samplerate"] (int): samplerate of the voice data
                 voice_data["src"] (int, int): coordinate of the sound source in the map
                 voice_data["src_idx"] (int): sound source index
+                voice_data["src_room_id"] (int): room_id of the room where the sound source located
                 voice_data["dst"] (int, int): coordinate of the microphone in the map
                 voice_data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
@@ -75,7 +76,9 @@ class Pipeline(object):
         X = []
         y = []
 
-        src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
+        # room id start from 1
+        src_room = voice_data["src_room_id"]
+        # src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
 
         ######################################################
         # Extract sound feature
@@ -138,6 +141,7 @@ class Pipeline(object):
                 voice_data["samplerate"] (int): samplerate of the voice data
                 voice_data["src"] (int, int): coordinate of the sound source in the map
                 voice_data["src_idx"] (int): sound source index
+                voice_data["src_room_id"] (int): room_id of the room where the sound source located
                 voice_data["dst"] (int, int): coordinate of the microphone in the map
                 voice_data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
@@ -148,7 +152,9 @@ class Pipeline(object):
         X = []
         y = []
 
-        src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
+        # room id start from 1
+        src_room = voice_data["src_room_id"]
+        # src_room = self.__get_room_idx(map_data["data"], voice_data["src"][0], voice_data["src"][1])
 
         ######################################################
         # Extract sound feature

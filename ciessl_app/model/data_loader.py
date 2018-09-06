@@ -100,6 +100,7 @@ class DataLoader(object):
                 data["src"] (int, int): coordinate of the sound source in the map
                 data["src_idx"] (int): sound source index
                 data["dst"] (int, int): coordinate of the microphone in the map
+                data["src_room_id"] (int): room_id of the room where the sound source located
                 data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
         """
@@ -130,6 +131,7 @@ class DataLoader(object):
             data["src"] = self.src_pos_[info["src"] - 1]
             data["src_idx"] = info["src"]
             data["dst"] = self.dst_pos_[info["dst"] - 1]
+            data["src_room_id"] = self.room_id_[info["src"] - 1]
 
             yield data
 
@@ -240,12 +242,15 @@ class DataLoader(object):
         self.real2simu_tf_ = (int(delta_x), int(delta_y))
 
         # convert src position to cell-scale (in which cell is the sound source)
+        # the i-th item contains the information of src i+1
         self.src_pos_ = []
+        self.room_id_ = []
         # src 1 start from index 0
         for src in src_pos:
             x = src["x"] / self.resolution_ - self.real2simu_tf_[0] + self.origin_[0]
             y = src["y"] / self.resolution_ - self.real2simu_tf_[1] + self.origin_[1]
             self.src_pos_.append( (int(x), int(y)) )
+            self.room_id_.append(src["room_id"])
 
         # convert microphone position to cell-scale (in which cell is the sound source)
         self.dst_pos_ = []
