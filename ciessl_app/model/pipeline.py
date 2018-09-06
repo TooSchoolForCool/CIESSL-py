@@ -1,9 +1,11 @@
 import sys
 import os
+import math
 import json
 import Queue
 
 import numpy as np
+import cv2
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -98,16 +100,16 @@ class Pipeline(object):
         ######################################################
         map_feature = None
 
-        # if self.map_feature_ == "flooding":
-        #     mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
-        #         map_data["boundary"], self.mic_fading_rate_)
-        #     shrink_map = self.__shrink_map(mic_flooding_map, kernel_size=(5, 5))
-        #     map_feature = shrink_map.flatten()
+        if self.map_feature_ == "flooding":
+            mic_flooding_map = self.__flooding_map(map_data["data"], voice_data["dst"],
+                map_data["boundary"], self.mic_fading_rate_)
+            shrink_map = self.__shrink_map(mic_flooding_map, kernel_size=(25, 25))
+            map_feature = shrink_map.flatten().astype(np.float32)
 
-        # feature_vec = np.append(sound_feature, map_feature)
+        feature_vec = np.append(sound_feature, map_feature)
 
-        X.append(sound_feature)
-        # X.append(feature_vec)
+        # X.append(sound_feature)
+        X.append(feature_vec)
         y.append(src_room)
 
         X = np.asarray(X)
@@ -314,10 +316,10 @@ class Pipeline(object):
 
 
     def __flooding_map(self, grid_map, center, boundary, rate):
-        flooding_map = np.zeros((grid_map.shape[0], grid_map.shape[1], 1), np.uint8)
+        flooding_map = np.zeros((grid_map.shape[0], grid_map.shape[1], 1), np.float32)
         visited = np.zeros(grid_map.shape, np.uint8)
 
-        pivot = 255.0
+        pivot = 1.0
         height, width = grid_map.shape
 
         q = Queue.Queue()
@@ -345,16 +347,34 @@ class Pipeline(object):
                     q.put( (x, y - 1) )
                     visited[y - 1, x] = 1
 
-                flooding_map[y, x] = int(pivot)
+                flooding_map[y, x] = pivot
 
-            pivot *= rate
+            entropy = min(0.0524 * np.random.rand(1)[0] + 0.94, rate)
+            # print("entropy: {}".format(entropy))
+            pivot *= entropy
 
         # crop out map region
         min_x, min_y = boundary["bl"][0], boundary["bl"][1]
         max_x, max_y = boundary["tr"][0], boundary["tr"][1]
+
         flooding_map = flooding_map[min_y:max_y, min_x:max_x]
+        # flooding_map = cv2.GaussianBlur(flooding_map, (3, 3), 0.01);
 
         return flooding_map
+
+
+    def __flooding_map2(self, grid_map, center, boundary, rate):
+        m = np.zeros((grid_map.shape[0], grid_map.shape[1], 1), np.uint8)
+
+        for y in range(0, m.shape[0]):
+            for x in range(0, m.shape[1]):
+                if grid_map[y, x] == 0:
+                    continue
+
+                dist = math.sqrt((y - center[1]) ** 2 + (x - center[0]) ** 2)
+                m[y, x] = 255 - 1.05 * dist
+        m = 255 - m
+        return m
 
 
     def __get_room_idx(self, segmented_map, x, y):
@@ -428,10 +448,10 @@ class Pipeline(object):
 
     def __shrink_map(self, img, kernel_size=(3, 3)):
         # reshape image in terms of pytorch conv requirements
-        img = img.astype(float)
+        img = img.astype(np.float32)
         img = torch.from_numpy(img.reshape((1, 1, img.shape[0], img.shape[1])))
-        img = F.max_pool2d(Variable(img), kernel_size=kernel_size)
-        img = img.data.squeeze().numpy().astype("uint8")
+        img = F.avg_pool2d(Variable(img), kernel_size=kernel_size)
+        img = img.data.squeeze().numpy().astype("float32")
         return img
 
 

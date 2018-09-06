@@ -2,8 +2,7 @@ import argparse
 
 import numpy as np
 from sklearn.neural_network import MLPRegressor, MLPClassifier
-from skmultilearn.adapt import MLkNN
-from skmultilearn.neurofuzzy import MLARAM
+from skmultilearn.adapt import MLkNN, MLARAM
 
 from voice_engine.signal_process import stft
 from voice_engine.utils import view_spectrum
@@ -194,7 +193,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     # preparing init training set
     init_training_X = None
     init_training_y = None
-    for voice in dl.voice_data_iterator(n_samples=2, seed=0):
+    for voice in dl.voice_data_iterator(n_samples=1, seed=0):
         X, y = pipe.prepare_training_data(map_data, voice)
         
         new_y = []
