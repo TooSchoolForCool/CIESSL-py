@@ -80,6 +80,12 @@ def arg_parser():
         type=str,
         help="Model directory for voice encoder"
     )
+    parser.add_argument(
+        "--save_trace",
+        dest="save_trace",
+        type=str,
+        help="Output directory of robot exploration traces"
+    )
 
     args = parser.parse_args()
 
@@ -120,7 +126,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
 
 
 def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path):
+    map_feature, voice_encoder_path, save_trace):
     """
     Treat the task as a classification problem.
     """
@@ -152,6 +158,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
+    tracker = TraceTracker(verbose=True)
     for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice)
@@ -167,17 +174,22 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         evaluator.evaluate(y, predicted_y)
         print("acc: %r" % (evaluator.get_eval_result()))
 
+        if save_trace is not None:
+            tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
         # l2r.partial_fit(X, y, n_iter=10)
         l2r.fit(X, y)
         cnt += 1
+
+    if save_trace is not None:
+        tracker.dump(save_trace)
 
     evaluator.plot_acc_history()
 
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path):
+    map_feature, voice_encoder_path, save_trace):
     """
-    Treat the task as a classification problem.
+    Treat the task as a ranking problem.
     """
     # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     # clf = MLkNN(k=10)
@@ -219,7 +231,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
     tracker = TraceTracker(verbose=True)
-    for voice in dl.voice_data_iterator(seed=7):
+    for voice in dl.voice_data_iterator(n_samples=5, seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice)
 
@@ -239,12 +251,15 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         evaluator.evaluate(y, predicted_y)
         print("acc: %r" % (evaluator.get_eval_result()))
 
-        tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
-        tracker.dump("asd.json")
-        exit(0)
+        if save_trace is not None:
+            tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
+
         # l2r.partial_fit(X, y, n_iter=5)
         l2r.fit(X, new_y)
         cnt += 1
+
+    if save_trace is not None:
+        tracker.dump(save_trace)
 
     evaluator.plot_acc_history()
 
@@ -255,11 +270,11 @@ def train_model():
     if args.mode == "clf":
         classification_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
-            voice_encoder_path=args.voice_encoder)
+            voice_encoder_path=args.voice_encoder, save_trace=args.save_trace)
     elif args.mode == "rank":
         ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
-            voice_encoder_path=args.voice_encoder)
+            voice_encoder_path=args.voice_encoder, save_trace=args.save_trace)
 
 
 if __name__ == '__main__':
