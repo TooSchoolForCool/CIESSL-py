@@ -139,46 +139,28 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     # preparing init training set
-    init_training_X = None
-    init_training_y = None
-    for voice in dl.voice_data_iterator(n_samples=10, seed=0):
-        X, y = pipe.prepare_training_data(map_data, voice)
-        if init_training_X is None:
-            init_training_X = X
-            init_training_y = y
-        else:
-            init_training_X = np.append(init_training_X, X, axis=0)
-            init_training_y = np.append(init_training_y, y, axis=0)
+    init_X, init_y = utils.init_training_set(dl, pipe, n_samples=5, seed=0, type="clf")
+    print(init_X.shape)
+    print(init_y.shape)
 
     classes = [i for i in range(1, map_data["n_room"] + 1)]
-    print(init_training_X.shape)
-    print(init_training_y.shape)
-    # l2r.partial_fit(init_training_X, init_training_y, classes=classes, n_iter=10)
-    l2r.fit(init_training_X, init_training_y)
+    # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=10)
+    l2r.fit(init_X, init_y)
 
-    cnt = 1
-    evaluator = Evaluator(map_data["n_room"])
+    evaluator = Evaluator(map_data["n_room"], verbose=True)
     tracker = TraceTracker(verbose=True)
     for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice)
 
-        # predicted_y = l2r.predict_proba(X).todense()
-        # predicted_y = np.asarray(predicted_y)
         predicted_y = l2r.predict_proba(X)
-
-        print("Sample %d" % cnt)
-        print("y:\t%r" % (y))
-        print("pred:\t {}".format(predicted_y))
-
         evaluator.evaluate(y, predicted_y)
-        print("acc: %r" % (evaluator.get_eval_result()))
 
         if save_trace is not None:
             tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
+            
         # l2r.partial_fit(X, y, n_iter=10)
         l2r.fit(X, y)
-        cnt += 1
 
     if save_trace is not None:
         tracker.dump(save_trace)
@@ -204,59 +186,30 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     # preparing init training set
-    init_training_X = None
-    init_training_y = None
-    for voice in dl.voice_data_iterator(n_samples=1, seed=0):
-        X, y = pipe.prepare_training_data(map_data, voice)
-        
-        new_y = []
-        for i in range(1, map_data["n_room"] + 1):
-            new_y.append(1 if i == y else -1)
-        y = np.asarray([new_y])
-
-        if init_training_X is None:
-            init_training_X = X
-            init_training_y = y
-        else:
-            init_training_X = np.append(init_training_X, X, axis=0)
-            init_training_y = np.append(init_training_y, y, axis=0)
+    init_X, init_y = utils.init_training_set(dl, pipe, n_samples=5, seed=0, type="rank")
+    print(init_X.shape)
+    print(init_y.shape)
 
     classes = [i for i in range(1, map_data["n_room"] + 1)]
-    print(init_training_X.shape)
-    print(init_training_y.shape)
-    # l2r.partial_fit(init_training_X, init_training_y, classes=classes, n_iter=5)
-    l2r.fit(init_training_X, init_training_y)
-    # l2r.partial_fit(init_training_X, init_training_y, n_iter=5)
+    # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=5)
+    l2r.fit(init_X, init_y)
+    # l2r.partial_fit(init_X, init_y, n_iter=5)
 
-    cnt = 1
-    evaluator = Evaluator(map_data["n_room"])
+    evaluator = Evaluator(map_data["n_room"], verbose=True)
     tracker = TraceTracker(verbose=True)
-    for voice in dl.voice_data_iterator(n_samples=5, seed=7):
+    for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice)
-
-        new_y = []
-        for i in range(1, map_data["n_room"] + 1):
-            new_y.append(1 if i == y else -1)
-        new_y = np.asarray([new_y])
-
-        # predicted_y = l2r.predict_proba(X).todense()
-        # predicted_y = np.asarray(predicted_y)
+        rank_y = utils.label2rank(label=y, n_labels=map_data["n_room"])
+        
         predicted_y = l2r.predict_proba(X)
-
-        print("*" * 60)
-        print("Sample %d" % cnt)
-        print("y:\t%r" % (y))
-        print("pred:\t {}".format(predicted_y[0]))
         evaluator.evaluate(y, predicted_y)
-        print("acc: %r" % (evaluator.get_eval_result()))
 
         if save_trace is not None:
             tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
 
         # l2r.partial_fit(X, y, n_iter=5)
-        l2r.fit(X, new_y)
-        cnt += 1
+        l2r.fit(X, rank_y)
 
     if save_trace is not None:
         tracker.dump(save_trace)

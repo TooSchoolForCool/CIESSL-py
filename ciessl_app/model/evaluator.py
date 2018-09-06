@@ -3,12 +3,15 @@ import matplotlib.pyplot as plt
 
 
 class Evaluator(object):
-    def __init__(self, n_rooms):
+    def __init__(self, n_rooms, verbose=False):
         self.n_rooms_ = n_rooms
 
         # scoreboard_[i] indicates the total times that find the 
         # target within `i+1` trials
         self.scoreboard_ = [0 for _ in range(n_rooms)]
+
+        # verbose: print out ranking information
+        self.verbose_ = verbose
 
         # scoreboard accuracy history (scoreboard / total_exp)
         self.acc_history_ = []
@@ -33,7 +36,7 @@ class Evaluator(object):
                 print("n_rooms: {}".format(self.n_rooms_))
                 assert(len(predicted_prob) == self.n_rooms_)
 
-            ranking = self.__calc_room_ranking(predicted_prob)
+            ranking = self.calc_room_ranking_(predicted_prob)
             for rank, room_idx in enumerate(ranking):
                 if room_idx == target:
                     for i in range(rank, self.n_rooms_):
@@ -41,6 +44,9 @@ class Evaluator(object):
         
         self.total_exp_ += len(y)
         self.acc_history_.append([1.0 * score / self.total_exp_ for score in self.scoreboard_])
+
+        if self.verbose_:
+            self.print_log_(y, predicted_y)
 
 
     def get_eval_result(self):
@@ -74,13 +80,13 @@ class Evaluator(object):
         plt.show()
 
 
-    def __find_target_room(self, y):
+    def find_target_room_(self, y):
         for i in range(0, self.n_rooms_):
             if y[i] == 1:
                 return i + 1
 
 
-    def __calc_room_ranking(self, predicted_y):
+    def calc_room_ranking_(self, predicted_y):
         """
         Calculate the room ranking given the predicted result
 
@@ -101,6 +107,15 @@ class Evaluator(object):
         ranking = [t[0] for t in ranking_tuple]
 
         return ranking
+
+
+    def print_log_(self, y, predicted_y):
+        print("-" * 80)
+        print("| * Sample %d *" % self.total_exp_)
+        print("| y:\t%r" % (y))
+        print("| pred:\t {}".format(predicted_y))
+        print("| acc: %r" % (self.get_eval_result()))
+        print("-" * 80)
 
 
 def test_evaluator():

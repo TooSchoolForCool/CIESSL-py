@@ -13,7 +13,6 @@ class TraceTracker(object):
         ranking_tuple.sort(key=lambda v : v[1], reverse=True)
         ranking = [t[0] for t in ranking_tuple]
 
-        print(ranking)
         trace = []
         for room_id in ranking:
             trace.append(room_id)

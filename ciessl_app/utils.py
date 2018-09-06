@@ -13,6 +13,7 @@ def show_flooding_map(map_data):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+
 def save_segmented_map(map_data, n_room, room_centers, 
     origin, src, dst, boundary, output_path="segmented_map.png"):
     """
@@ -86,3 +87,34 @@ def load_encoder_model(cfg_path):
     encoder.load(params_dir)
 
     return encoder
+
+
+def label2rank(label, n_labels):
+    new_y = []
+    for i in range(1, n_labels + 1):
+        new_y.append(1 if i == label else -1)
+    new_y = np.asarray([new_y])
+
+    return new_y
+
+
+def init_training_set(data_loader, pipe, n_samples, seed=0, type="clf"):
+    map_data = data_loader.load_map_info()
+    init_X, init_y = None, None
+
+    for voice in data_loader.voice_data_iterator(n_samples=n_samples, seed=seed):
+        X, y = pipe.prepare_training_data(map_data, voice)
+
+        if type == "rank":
+            y = label2rank(y, map_data["n_room"])
+
+        if init_X is None:
+            init_X = X
+            init_y = y
+        else:
+            init_X = np.append(init_X, X, axis=0)
+            init_y = np.append(init_y, y, axis=0)
+
+    return init_X, init_y
+
+
