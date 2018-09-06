@@ -98,7 +98,7 @@ def label2rank(label, n_labels):
     return new_y
 
 
-def init_training_set(data_loader, pipe, n_samples, seed=0, type="clf"):
+def init_training_set(data_loader, pipe, n_samples, seed=0, type="clf", n_labels=None):
     map_data = data_loader.load_map_info()
     init_X, init_y = None, None
 
@@ -106,7 +106,7 @@ def init_training_set(data_loader, pipe, n_samples, seed=0, type="clf"):
         X, y = pipe.prepare_training_data(map_data, voice)
 
         if type == "rank":
-            y = label2rank(y, map_data["n_room"])
+            y = label2rank(y, n_labels)
 
         if init_X is None:
             init_X = X
