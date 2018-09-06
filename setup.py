@@ -16,7 +16,9 @@ requirements = [
     'matplotlib',
     'scikit-learn',
     'opencv-python',
-    'librosa'
+    'librosa',
+    'future',
+    'scikit-multilearn'
 ]
 
 setup_requirements = [
