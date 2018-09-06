@@ -14,6 +14,7 @@ from model.autoencoder import VoiceVAE, VoiceEncoder
 from model.online_clf import OnlineClassifier
 from model.rank_clf import RankCLF
 from model.rank_fogd import RankFOGD
+from model.trace_tracker import TraceTracker
 import utils
 
 
@@ -217,6 +218,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     cnt = 1
     evaluator = Evaluator(map_data["n_room"])
+    tracker = TraceTracker(verbose=True)
     for voice in dl.voice_data_iterator(seed=7):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice)
@@ -230,13 +232,16 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         # predicted_y = np.asarray(predicted_y)
         predicted_y = l2r.predict_proba(X)
 
+        print("*" * 60)
         print("Sample %d" % cnt)
         print("y:\t%r" % (y))
         print("pred:\t {}".format(predicted_y[0]))
-
         evaluator.evaluate(y, predicted_y)
         print("acc: %r" % (evaluator.get_eval_result()))
 
+        tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
+        tracker.dump("asd.json")
+        exit(0)
         # l2r.partial_fit(X, y, n_iter=5)
         l2r.fit(X, new_y)
         cnt += 1

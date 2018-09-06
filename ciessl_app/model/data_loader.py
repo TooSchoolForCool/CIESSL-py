@@ -101,6 +101,7 @@ class DataLoader(object):
                 data["src_idx"] (int): sound source index
                 data["dst"] (int, int): coordinate of the microphone in the map
                 data["src_room_id"] (int): room_id of the room where the sound source located
+                data["mic_room_id"] (int): room_id of the room where the robot (microphone) located
                 data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
         """
@@ -131,7 +132,8 @@ class DataLoader(object):
             data["src"] = self.src_pos_[info["src"] - 1]
             data["src_idx"] = info["src"]
             data["dst"] = self.dst_pos_[info["dst"] - 1]
-            data["src_room_id"] = self.room_id_[info["src"] - 1]
+            data["src_room_id"] = self.src_room_id_[info["src"] - 1]
+            data["mic_room_id"] = self.mic_room_id_[info["dst"] - 1]
 
             yield data
 
@@ -244,21 +246,23 @@ class DataLoader(object):
         # convert src position to cell-scale (in which cell is the sound source)
         # the i-th item contains the information of src i+1
         self.src_pos_ = []
-        self.room_id_ = []
+        self.src_room_id_ = []
         # src 1 start from index 0
         for src in src_pos:
             x = src["x"] / self.resolution_ - self.real2simu_tf_[0] + self.origin_[0]
             y = src["y"] / self.resolution_ - self.real2simu_tf_[1] + self.origin_[1]
             self.src_pos_.append( (int(x), int(y)) )
-            self.room_id_.append(src["room_id"])
+            self.src_room_id_.append(src["room_id"])
 
         # convert microphone position to cell-scale (in which cell is the sound source)
         self.dst_pos_ = []
+        self.mic_room_id_ = []
         # dst 1 start from index 0
         for dst in dst_pos:
             x = dst["x"] / self.resolution_ - self.real2simu_tf_[0] + self.origin_[0]
             y = dst["y"] / self.resolution_ - self.real2simu_tf_[1] + self.origin_[1]
             self.dst_pos_.append( (int(x), int(y)) )
+            self.mic_room_id_.append(dst["room_id"])
 
 
     def load_whole_dataset(self):

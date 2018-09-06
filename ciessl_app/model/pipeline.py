@@ -66,6 +66,7 @@ class Pipeline(object):
                 voice_data["src"] (int, int): coordinate of the sound source in the map
                 voice_data["src_idx"] (int): sound source index
                 voice_data["src_room_id"] (int): room_id of the room where the sound source located
+                voice_data["mic_room_id"] (int): room_id of the room where the robot (microphone) located
                 voice_data["dst"] (int, int): coordinate of the microphone in the map
                 voice_data["frames"] ( np.ndarray (n_samples, n_channels) ): 
                     sound signal frames from every mic channel
