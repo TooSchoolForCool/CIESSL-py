@@ -279,8 +279,7 @@ class Pipeline(object):
             _, _, amp, phase = stft(frame_stack[:24000, i], samplerate, nfft=1024, segment_size=256, 
                 overlap_size=224)
             cropped = amp[:255, :255]
-            log_cropped = np.log10(cropped)
-            log_normalized_cropped = self.__min_max_scaler(log_cropped)
+            log_normalized_cropped = self.log_peak_normalize_(cropped)
             # each channel stft is a (1, 255, 255) tensor
             voice_stft.append( [log_normalized_cropped] )
         # convert to batch-form
@@ -304,7 +303,8 @@ class Pipeline(object):
         return code.flatten()
 
 
-    def __min_max_scaler(self, data):
+    def log_peak_normalize_(self, data):
+        data = np.log10(data)
         min_val = np.amin(data)
         max_val = np.amax(data)
         data = 1.0 * (data - min_val) / (max_val - min_val)

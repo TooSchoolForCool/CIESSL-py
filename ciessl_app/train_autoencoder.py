@@ -3,7 +3,7 @@ import argparse
 import random
 
 import numpy as np
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import MinMaxScaler
 import torch
 from torch import nn
 from torch.autograd import Variable
@@ -225,22 +225,18 @@ def train_voice_cae(voice_data_dir, out_path):
 
 
 def train_denoise_ae(voice_data_dir, out_path):
-    # def min_max_scaler(data):
-    #     # log-scale transform
-    #     for i in range(data.shape[0]):
-    #         min_val = np.amin(data[i])
-    #         max_val = np.amax(data[i])
-    #         data[i] = 1.0 * (data[i] - min_val) / (max_val - min_val)
-
-    #     return data
+    def min_max_scaler(data):
+        scaler = MinMaxScaler()
+        data = scaler.fit_transform(data)
+        return data
 
     def append_func(dataset, data):
         for d in data:
             dataset.append(d)
         return dataset
 
-    # bl = BatchLoader(voice_data_dir, scaler=min_max_scaler, mode="all", append_data=append_func)
-    bl = BatchLoader(voice_data_dir, mode="train", append_data=append_func)
+    bl = BatchLoader(voice_data_dir, scaler=min_max_scaler, mode="all", append_data=append_func)
+    # bl = BatchLoader(voice_data_dir, mode="train", append_data=append_func)
 
     num_epochs = 500000
     batch_size = 8
@@ -272,7 +268,7 @@ def train_denoise_ae(voice_data_dir, out_path):
             if torch.cuda.is_available():
                 data = data.cuda()
             # activation
-            data = F.sigmoid(data)
+            # data = F.sigmoid(data)
             # forward
             recon_batch = model(data)
             loss = model.loss(recon_batch, data)
