@@ -225,12 +225,20 @@ def train_voice_cae(voice_data_dir, out_path):
 
 
 def train_denoise_ae(voice_data_dir, out_path):
+    def min_max_scaler(data):
+        # log-scale transform
+        for i in range(data.shape[0]):
+            min_val = np.amin(data[i])
+            max_val = np.amax(data[i])
+            data[i] = 1.0 * (data[i] - min_val) / (max_val - min_val)
+        return data
+
     def append_func(dataset, data):
         for d in data:
             dataset.append(d)
         return dataset
 
-    bl = BatchLoader(voice_data_dir, mode="all", append_data=append_func)
+    bl = BatchLoader(voice_data_dir, scaler=min_max_scaler, mode="all", append_data=append_func)
     # bl = BatchLoader(voice_data_dir, mode="train")
 
     num_epochs = 500000
