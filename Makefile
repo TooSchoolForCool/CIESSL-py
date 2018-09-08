@@ -28,8 +28,12 @@ save_gccphat:
 	python ciessl_app/tools/save_gccphat.py --voice="data/active_voice" --map="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_pos_tf.json" --out="data/gccphat"
 
+save_conv_ae_code:
+	python ciessl_app/tools/save_conv_ae_code.py --data="data/stft_data/train/amp" --out="data/conv_code_256" \
+		--model="data/model/stft_cae_subset_256.json"
+
 train_autoencoder:
-	python ciessl_app/train_autoencoder.py --data="data/stft_data/amp" --encoder="voice_cae" \
+	python ciessl_app/train_autoencoder.py --data="data/stft_data/train/amp" --encoder="voice_cae" \
 		--out="stft_cae.model"
 
 train:
