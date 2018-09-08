@@ -41,7 +41,7 @@ def arg_parser():
         help="output directory"
     )
 
-    valid_encoder = ["voice_vae", "voice_ae", "voice_cae"]
+    valid_encoder = ["voice_vae", "voice_ae", "voice_cae", "denoise_ae"]
     parser.add_argument(
         "--encoder",
         dest="encoder",
@@ -224,6 +224,62 @@ def train_voice_cae(voice_data_dir, out_path):
             model.save(out_path)
 
 
+def train_denoise_ae(voice_data_dir, out_path):
+    def append_func(dataset, data):
+        for d in data:
+            dataset.append(d)
+        return dataset
+
+    bl = BatchLoader(voice_data_dir, mode="all", append_data=append_func)
+    # bl = BatchLoader(voice_data_dir, mode="train")
+
+    num_epochs = 500000
+    batch_size = 8
+    learning_rate = 1e-4
+    lr_decay_freq = 1000
+    save_frequency = 100
+
+    model = VoiceEncoder(nn_structure=[256, 32])
+    if torch.cuda.is_available():
+        print("[INFO] CUDA is available")
+        model.cuda()
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    min_loss = 99999999.0
+
+    model.train()
+    print("dataset size: {}".format(bl.size()))
+    for epoch in range(num_epochs):
+        train_loss = 0.0
+
+        if epoch % lr_decay_freq == 0 and epoch != 0:
+            learning_rate *= 0.99
+            for g in optimizer.param_groups:
+                g['lr'] = learning_rate
+        
+        for batch in bl.load_batch(batch_size=batch_size, suffle=True, flatten=False):
+            data = torch.Tensor(batch)
+            data = Variable(data)
+            if torch.cuda.is_available():
+                data = data.cuda()
+            # forward
+            recon_batch = model(data)
+            loss = model.loss(recon_batch, data)
+            # backward
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+
+        print('====> Epoch: {}\tAverage loss: {:.6f}\tlearning_rate: {:.7f}'.format(
+            epoch, train_loss / bl.size(), learning_rate))
+
+        if epoch % save_frequency == 0 and min_loss > train_loss / bl.size():
+            min_loss = train_loss / bl.size()
+            print("***** model saved at: {}".format(out_path))
+            model.save(out_path)
+
+
 def main():
     args = arg_parser()
 
@@ -233,6 +289,8 @@ def main():
         train_voice_ae(voice_data_dir=args.data, out_path=args.out)
     elif args.encoder == "voice_cae":
         train_voice_cae(voice_data_dir=args.data, out_path=args.out)
+    elif args.encoder == "denoise_ae":
+        train_denoise_ae(voice_data_dir=args.data, out_path=args.out)
     else:
         print("[ERROR] main(): no such encoder {}".format(args.encoder))
         raise

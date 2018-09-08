@@ -33,8 +33,8 @@ save_conv_ae_code:
 		--model="data/model/stft_cae_subset_256.json"
 
 train_autoencoder:
-	python ciessl_app/train_autoencoder.py --data="data/stft_data/train/amp" --encoder="voice_cae" \
-		--out="stft_cae.model"
+	python ciessl_app/train_autoencoder.py --data="data/conv_code_256" --encoder="denoise_ae" \
+		--out="denoise_ae_inner.model"
 
 train:
 	python ciessl_app/train.py --voice_data="data/hand_vad_pickle/test/3Room" --map_data="data/map/bh9f_lab_map.json" \
