@@ -78,7 +78,7 @@ class VoiceEncoder(AutoEncoder):
 
         # build last layer
         net.append(nn.Linear(structure[-2], structure[-1]))
-        net.append( nn.Tanh() )
+        net.append( nn.Sigmoid() )
 
         self.decoder_ = nn.Sequential(*net)
 
