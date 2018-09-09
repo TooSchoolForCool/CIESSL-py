@@ -102,6 +102,55 @@ def save_ae_code(voice_data_dir, out_path, model_path):
     code_batch.dump(out_path + "/conv_code_train.pickle")
 
 
+def save_ae_flatten_code(voice_data_dir, out_path, model_path):    
+    n_freq_bins = 255
+    n_time_bins = 255
+
+    def min_max_scaler(data):
+        # log-scale transform
+        data = np.log10(data)
+        for i in range(data.shape[0]):
+            min_val = np.amin(data[i])
+            max_val = np.amax(data[i])
+            data[i] = 1.0 * (data[i] - min_val) / (max_val - min_val)
+        return data
+
+    def append_func(dataset, data):
+        batch = []
+        for d in data:
+            batch.append( [d[:n_freq_bins, :n_time_bins]] )
+        batch = np.asarray(batch)
+        dataset.append(batch)
+        return dataset
+
+    bl = BatchLoader(voice_data_dir, scaler=min_max_scaler, mode="all", append_data=append_func)
+    model = load_encoder_model(model_path)
+
+    code_batch = []
+    for batch in bl.load_batch(batch_size=1, suffle=False, flatten=False):
+        data = torch.Tensor(batch[0])
+        data = Variable(data)
+        if torch.cuda.is_available():
+            data = data.cuda()
+        # forward
+        code = model.encode(data)
+        # flatten tensor (16, x, y, z) ===> (16, x*y*z)
+        code = code.view(code.size(0), -1)
+        # convert code to numpy.ndarray (n_feature, )
+        if torch.cuda.is_available():
+            code = code.data.cpu().numpy()
+        else:
+            code = code.data.numpy()
+        code = code.flatten()
+
+        code_batch.append(code)
+        print(len(code_batch))
+
+    code_batch = np.asarray(code_batch)
+    print(code_batch.shape)
+    code_batch.dump(out_path + "/conv_code_train.pickle")
+
+
 def main():
     args = arg_parser()
 
@@ -109,7 +158,7 @@ def main():
     if not os.path.exists(args.out):
         os.makedirs(args.out)
 
-    save_ae_code(args.data, args.out, args.model)
+    save_ae_flatten_code(args.data, args.out, args.model)
 
 if __name__ == '__main__':
     main()

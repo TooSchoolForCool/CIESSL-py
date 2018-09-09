@@ -240,11 +240,11 @@ def train_denoise_ae(voice_data_dir, out_path):
 
     num_epochs = 500000
     batch_size = 8
-    learning_rate = 1e-4
-    lr_decay_freq = 1000
+    learning_rate = 1e-3
+    lr_decay_freq = 100
     save_frequency = 100
 
-    model = VoiceEncoder(nn_structure=[256, 32])
+    model = VoiceEncoder(nn_structure=[4096, 1024, 256])
     if torch.cuda.is_available():
         print("[INFO] CUDA is available")
         model.cuda()
@@ -257,8 +257,8 @@ def train_denoise_ae(voice_data_dir, out_path):
     for epoch in range(num_epochs):
         train_loss = 0.0
 
-        if epoch % lr_decay_freq == 0 and epoch != 0:
-            learning_rate *= 0.99
+        if epoch == 500:
+            learning_rate = 1e-4
             for g in optimizer.param_groups:
                 g['lr'] = learning_rate
         
@@ -268,7 +268,7 @@ def train_denoise_ae(voice_data_dir, out_path):
             if torch.cuda.is_available():
                 data = data.cuda()
             # activation
-            # data = F.sigmoid(data)
+            # data = F.relu(data)
             # forward
             recon_batch = model(data)
             loss = model.loss(recon_batch, data)
