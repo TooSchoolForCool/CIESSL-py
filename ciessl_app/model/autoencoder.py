@@ -305,6 +305,30 @@ class VoiceConvAE(AutoEncoder):
         return mask
 
 
+class VoiceDenoiseAE(object):
+    def __init__(self, conv_model, inner_fc, scaler):
+        self.conv_model_ = conv_model
+        self.inner_fc_ = inner_fc
+        self.min_max_scaler_ = scaler
+
+    def encode(self, x):
+        conv_code = self.conv_model_.encode(x)
+        # flatten tensor (16, x, y, z) ===> (16, x*y*z)
+        conv_code = conv_code.view(conv_code.size(0), -1)
+        # convert conv_code to numpy.ndarray (n_feature, )
+        if torch.cuda.is_available():
+            conv_code = conv_code.data.cpu().numpy()
+        else:
+            conv_code = conv_code.data.numpy()
+
+        scaled_code = self.min_max_scaler_.transform([conv_code.flatten()])
+        scaled_code = torch.Tensor(scaled_code)
+        scaled_code = Variable(scaled_code)
+        if torch.cuda.is_available():
+            scaled_code = scaled_code.cuda()
+        code = self.inner_fc_.encode(scaled_code)
+
+        return code
 
 
 def test_autoencoder():

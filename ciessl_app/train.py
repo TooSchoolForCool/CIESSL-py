@@ -115,7 +115,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
 
     voice_enc = None
 
-    if voice_feature in ["enc", "gcc_enc", "conv_enc"]:
+    if voice_feature in ["enc", "gcc_enc", "conv_enc", "denoise_enc"]:
         voice_enc = utils.load_encoder_model(cfg_path=voice_encoder_path)
 
     pipe = Pipeline(
@@ -183,8 +183,8 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
     # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     # clf = MLkNN(k=10)
-    clf = MLARAM(vigilance=0.9, threshold=0.02)
-    # clf = RankCLF(n_classes=4, C=1.0, n_iter=1)
+    # clf = MLARAM(vigilance=0.9, threshold=0.02)
+    clf = RankCLF(n_classes=3, C=1.0, n_iter=1)
     # clf = RankFOGD(n_classes=4, eta=1e-3, D=10000, sigma=10.0)
     l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 

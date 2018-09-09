@@ -98,6 +98,8 @@ class Pipeline(object):
             sound_feature = self.__encode_gcc(frame_stack, samplerate)
         elif self.voice_feature_ == "conv_enc":
             sound_feature = self.__conv_encode_voice(frame_stack, samplerate)
+        elif self.voice_feature_ == "denoise_enc":
+            sound_feature = self.__denoise_encoder(frame_stack, samplerate)
 
         ######################################################
         # Extract Map feature
@@ -293,6 +295,35 @@ class Pipeline(object):
         code = self.voice_encoder_.encode(voice_stft)
         # flatten tensor (16, x, y, z) ===> (16, x*y*z)
         code = code.view(code.size(0), -1)
+
+        # convert code to numpy.ndarray (n_feature, )
+        if torch.cuda.is_available():
+            code = code.data.cpu().numpy()
+        else:
+            code = code.data.numpy()
+
+        return code.flatten()
+
+
+    def __denoise_encoder(self, frame_stack, samplerate):
+        # calculate log-scale normalized stft
+        voice_stft = []
+        for i in range(0, 16):
+            _, _, amp, phase = stft(frame_stack[:24000, i], samplerate, nfft=1024, segment_size=256, 
+                overlap_size=224)
+            cropped = amp[:255, :255]
+            log_normalized_cropped = self.log_peak_normalize_(cropped)
+            # each channel stft is a (1, 255, 255) tensor
+            voice_stft.append( [log_normalized_cropped] )
+        # convert to batch-form (16, 1, 255, 255)
+        voice_stft = np.asarray( voice_stft )
+        
+        voice_stft = torch.Tensor(voice_stft)
+        voice_stft = Variable(voice_stft)
+        if torch.cuda.is_available():
+            voice_stft = voice_stft.cuda()
+
+        code = self.voice_encoder_.encode(voice_stft)
 
         # convert code to numpy.ndarray (n_feature, )
         if torch.cuda.is_available():

@@ -1,11 +1,12 @@
 import random
 import os
+import pickle
 
 import numpy as np
 import torch, cv2
 import json
 
-from model.autoencoder import VoiceVAE, VoiceEncoder, VoiceConvAE
+from model.autoencoder import VoiceVAE, VoiceEncoder, VoiceConvAE, VoiceDenoiseAE
 
 
 def show_flooding_map(map_data):
@@ -69,22 +70,34 @@ def load_encoder_model(cfg_path):
     encoder_type = data["encoder_type"]
 
     # reconstruct model params file directory
-    cwd = os.getcwd().split("/") + cfg_path.split("/")
-    cwd[-1] = data["params_dir"]
-    params_dir = '/'.join(cwd)
+    def get_abs_dir(dir_path):  
+        cwd = os.getcwd().split("/") + cfg_path.split("/")
+        cwd[-1] = dir_path
+        params_dir = '/'.join(cwd)
+        return params_dir
 
     encoder = None
     if encoder_type == "VoiceEncoder":
         encoder = VoiceEncoder(nn_structure=data["nn_structure"])
+        encoder.load( get_abs_dir(data["params_dir"]) )
     elif encoder_type == "VoiceVAE":
         encoder = VoiceVAE(nn_structure=data["nn_structure"])
+        encoder.load( get_abs_dir(data["params_dir"]) )
     elif encoder_type == "VoiceConvAE":
         encoder = VoiceConvAE(code_size=data["code_size"])
+        encoder.load( get_abs_dir(data["params_dir"]) )
+    elif encoder_type == "VoiceDenoiseAE":
+        conv_encoder = VoiceConvAE(code_size=data["code_size"])
+        conv_encoder.load( get_abs_dir(data["conv_params_dir"]) )
+        inner_cf = VoiceEncoder(nn_structure=data["nn_structure"])
+        inner_cf.load( get_abs_dir(data["inner_cf_params_dir"]) )
+        with open(get_abs_dir(data["scaler_params_dir"]), "rb") as file_in:
+            scaler = pickle.load(file_in)
+
+        encoder = VoiceDenoiseAE(conv_encoder, inner_cf, scaler)
     else:
         print("[ERROR] utils.load_encoder_model(): do not support encoder type: {}".format(encoder_type))
         raise
-
-    encoder.load(params_dir)
 
     return encoder
 

@@ -242,7 +242,7 @@ def train_denoise_ae(voice_data_dir, out_path):
     bl = BatchLoader(voice_data_dir, scaler=min_max_scaler, mode="all", append_data=append_func)
     # bl = BatchLoader(voice_data_dir, mode="train", append_data=append_func)
 
-    num_epochs = 500000
+    num_epochs = 5000
     batch_size = 8
     learning_rate = 1e-3
     lr_decay_freq = 100
@@ -261,10 +261,22 @@ def train_denoise_ae(voice_data_dir, out_path):
     for epoch in range(num_epochs):
         train_loss = 0.0
 
-        if epoch == 500:
+        if epoch == 60:
             learning_rate = 1e-4
             for g in optimizer.param_groups:
                 g['lr'] = learning_rate
+
+        if epoch == 500:
+            learning_rate = 5e-5
+            for g in optimizer.param_groups:
+                g['lr'] = learning_rate
+
+        if epoch == 750:
+            learning_rate = 1e-5
+            for g in optimizer.param_groups:
+                g['lr'] = learning_rate
+
+
         
         for batch in bl.load_batch(batch_size=batch_size, suffle=True, flatten=False):
             data = torch.Tensor(batch)
