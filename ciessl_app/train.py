@@ -184,8 +184,8 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     # clf = MLkNN(k=10)
     # clf = MLARAM(vigilance=0.9, threshold=0.02)
-    clf = RankCLF(n_classes=3, C=1.0, n_iter=1)
-    # clf = RankFOGD(n_classes=4, eta=1e-3, D=10000, sigma=10.0)
+    # clf = RankCLF(n_classes=3, C=1.0, n_iter=1)
+    clf = RankFOGD(n_classes=4, eta=1e-3, D=5000, sigma=8.0)
     l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
@@ -194,21 +194,21 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     # preparing init training set
-    init_X, init_y = utils.init_training_set(dl, pipe, n_samples=1, seed=0, type="rank", n_labels=3)
+    init_X, init_y = utils.init_training_set(dl, pipe, n_samples=1, seed=0, type="rank", n_labels=4)
     print(init_X.shape)
     print(init_y.shape)
 
     # classes = [i for i in range(1, map_data["n_room"] + 1)]
     # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=5)
-    l2r.fit(init_X, init_y)
-    # l2r.partial_fit(init_X, init_y, n_iter=5)
+    # l2r.fit(init_X, init_y)
+    l2r.partial_fit(init_X, init_y, n_iter=5)
 
-    evaluator = Evaluator(map_data["n_room"] - 1, verbose=True)
+    evaluator = Evaluator(map_data["n_room"], verbose=True)
     tracker = TraceTracker(verbose=True)
     for voice in dl.voice_data_iterator(seed=5):
         # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
         X, y = pipe.prepare_training_data(map_data, voice)
-        rank_y = utils.label2rank(label=y, n_labels=map_data["n_room"] - 1)
+        rank_y = utils.label2rank(label=y, n_labels=map_data["n_room"])
         
         predicted_y = l2r.predict_proba(X)
         evaluator.evaluate(y, predicted_y)
@@ -216,8 +216,8 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         if save_trace is not None:
             tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
 
-        # l2r.partial_fit(X, y, n_iter=5)
-        l2r.fit(X, rank_y)
+        l2r.partial_fit(X, rank_y, n_iter=5)
+        # l2r.fit(X, rank_y)
 
     if save_trace is not None:
         tracker.dump(save_trace)
