@@ -2,6 +2,7 @@ import os
 import argparse
 import random
 
+import pickle
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import torch
@@ -228,6 +229,9 @@ def train_denoise_ae(voice_data_dir, out_path):
     def min_max_scaler(data):
         scaler = MinMaxScaler()
         data = scaler.fit_transform(data)
+        with open("min_max_scaler.pickle", "wb") as out_file:
+            pickle.dump(scaler, out_file)
+            print("[INFO] save scaler at {}".format("min_max_scaler.pickle"))
         return data
 
     def append_func(dataset, data):
