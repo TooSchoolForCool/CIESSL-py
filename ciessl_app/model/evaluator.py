@@ -14,6 +14,8 @@ class Evaluator(object):
         self.verbose_ = verbose
 
         # scoreboard accuracy history (scoreboard / total_exp)
+        # a sequence of accuracy, each time when a new sample come in, the 
+        # evaluator will generate a new accuracy record
         self.acc_history_ = []
 
         # number of experiments

@@ -1,3 +1,5 @@
+import os
+import sys
 import argparse
 
 import numpy as np
@@ -6,6 +8,7 @@ import librosa
 import torch
 from torch.autograd import Variable
 
+sys.path.append(os.path.dirname(__file__) + "/../")
 from model.batch_loader import BatchLoader
 from utils import load_encoder_model
 

@@ -42,7 +42,10 @@ train:
 		--voice_encoder="./data/model/stft_cae_subset_256.json" --map_feature="flooding" \
 		--save_train_hist="3room_history" --n_trails=10
 
+visualize:
+	python ciessl_app/visualizer.py --data="data/results/HARAM-10" --out="acc_errorband" --plot="acc_variance"
+
 test_enc:
-	python ciessl_app/test_enc.py --dataset="data/stft_data/train/amp" \
+	python ciessl_app/tools/test_enc.py --dataset="data/stft_data/train/amp" \
 		--encoder_model="data/model/stft_cae_subset.json"
 

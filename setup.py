@@ -18,7 +18,9 @@ requirements = [
     'opencv-python',
     'librosa',
     'future',
-    'scikit-multilearn'
+    'scikit-multilearn',
+    'seaborn',
+    'pandas'
 ]
 
 setup_requirements = [
