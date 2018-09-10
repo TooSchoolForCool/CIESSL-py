@@ -144,28 +144,28 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
     Treat the task as a classification problem.
     """
-    clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
-    l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
-
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
-
+    n_rooms = map_data["n_room"]
+    
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     for t in range(0, n_trails):
-        seed = random.randint(0, 1000)
+        clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
+        l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
+
         # preparing init training set
-        init_X, init_y = utils.init_training_set(dl, pipe, n_samples=5, seed=seed, type="clf")
+        init_X, init_y = utils.init_training_set(dl, pipe, n_samples=5, seed=random.randint(0, 1000), type="clf")
         print(init_X.shape)
         print(init_y.shape)
 
-        classes = [i for i in range(1, map_data["n_room"] + 1)]
+        classes = [i for i in range(1,  + 1)]
         # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=10)
         l2r.fit(init_X, init_y)
 
-        evaluator = Evaluator(map_data["n_room"], verbose=True)
+        evaluator = Evaluator(n_rooms, verbose=True)
         tracker = TraceTracker(verbose=True)
-        for voice in dl.voice_data_iterator(seed=seed):
+        for voice in dl.voice_data_iterator(seed=random.randint(0, 1000)):
             # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
             X, y = pipe.prepare_training_data(map_data, voice)
 
@@ -193,13 +193,6 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
     Treat the task as a ranking problem.
     """
-    # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
-    # clf = MLkNN(k=10)
-    clf = MLARAM(vigilance=0.9, threshold=0.02)
-    # clf = RankCLF(n_classes=3, C=1.0, n_iter=1)
-    # clf = RankFOGD(n_classes=4, eta=1e-3, D=5000, sigma=8.0)
-    l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
-
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
     n_rooms = map_data["n_room"] - 1
@@ -207,6 +200,13 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     for t in range(0, n_trails):
+        # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
+        # clf = MLkNN(k=10)
+        clf = MLARAM(vigilance=0.9, threshold=0.02)
+        # clf = RankCLF(n_classes=3, C=1.0, n_iter=1)
+        # clf = RankFOGD(n_classes=4, eta=1e-3, D=5000, sigma=8.0)
+        l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
+
         # preparing init training set
         init_X, init_y = utils.init_training_set(dl, pipe, n_samples=1, seed=random.randint(0, 1000), type="rank", n_labels=n_rooms)
         print(init_X.shape)
