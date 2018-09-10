@@ -1,4 +1,5 @@
 import argparse
+import random
 
 import numpy as np
 from sklearn.neural_network import MLPRegressor, MLPClassifier
@@ -92,6 +93,13 @@ def arg_parser():
         type=str,
         help="Output directory of training history"
     )
+    parser.add_argument(
+        "--n_trails",
+        dest="n_trails",
+        type=int,
+        default=1,
+        help="Number of trails for experiments"
+    )
 
     args = parser.parse_args()
 
@@ -132,7 +140,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
 
 
 def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, save_history):
+    map_feature, voice_encoder_path, save_trace, save_history, n_trails):
     """
     Treat the task as a classification problem.
     """
@@ -144,86 +152,94 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
-    # preparing init training set
-    init_X, init_y = utils.init_training_set(dl, pipe, n_samples=5, seed=0, type="clf")
-    print(init_X.shape)
-    print(init_y.shape)
+    for t in range(0, n_trails):
+        seed = random.randint(0, 1000)
+        # preparing init training set
+        init_X, init_y = utils.init_training_set(dl, pipe, n_samples=5, seed=seed, type="clf")
+        print(init_X.shape)
+        print(init_y.shape)
 
-    classes = [i for i in range(1, map_data["n_room"] + 1)]
-    # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=10)
-    l2r.fit(init_X, init_y)
+        classes = [i for i in range(1, map_data["n_room"] + 1)]
+        # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=10)
+        l2r.fit(init_X, init_y)
 
-    evaluator = Evaluator(map_data["n_room"], verbose=True)
-    tracker = TraceTracker(verbose=True)
-    for voice in dl.voice_data_iterator(seed=7):
-        # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
-        X, y = pipe.prepare_training_data(map_data, voice)
+        evaluator = Evaluator(map_data["n_room"], verbose=True)
+        tracker = TraceTracker(verbose=True)
+        for voice in dl.voice_data_iterator(seed=seed):
+            # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
+            X, y = pipe.prepare_training_data(map_data, voice)
 
-        predicted_y = l2r.predict_proba(X)
-        evaluator.evaluate(y, predicted_y)
+            predicted_y = l2r.predict_proba(X)
+            evaluator.evaluate(y, predicted_y)
+
+            if save_trace is not None:
+                tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
+                
+            # l2r.partial_fit(X, y, n_iter=10)
+            l2r.fit(X, y)
 
         if save_trace is not None:
-            tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
-            
-        # l2r.partial_fit(X, y, n_iter=10)
-        l2r.fit(X, y)
+            tracker.dump(save_trace)
+        if save_history is not None:
+            evaluator.save_history(out_dir=save_history + "_" + str(t) + ".csv", type="csv")
 
-    if save_trace is not None:
-        tracker.dump(save_trace)
-    if save_history is not None:
-        evaluator.save_history(out_dir="3room_history.csv", type="csv")
-    evaluator.plot_acc_history()
+        if t == n_trails - 1:
+            evaluator.plot_acc_history()
     
 
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, save_history):
+    map_feature, voice_encoder_path, save_trace, save_history, n_trails):
     """
     Treat the task as a ranking problem.
     """
     # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
     # clf = MLkNN(k=10)
-    # clf = MLARAM(vigilance=0.9, threshold=0.02)
+    clf = MLARAM(vigilance=0.9, threshold=0.02)
     # clf = RankCLF(n_classes=3, C=1.0, n_iter=1)
-    clf = RankFOGD(n_classes=4, eta=1e-3, D=5000, sigma=8.0)
+    # clf = RankFOGD(n_classes=4, eta=1e-3, D=5000, sigma=8.0)
     l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
+    n_rooms = map_data["n_room"] - 1
 
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
-    # preparing init training set
-    init_X, init_y = utils.init_training_set(dl, pipe, n_samples=1, seed=0, type="rank", n_labels=4)
-    print(init_X.shape)
-    print(init_y.shape)
+    for t in range(0, n_trails):
+        # preparing init training set
+        init_X, init_y = utils.init_training_set(dl, pipe, n_samples=1, seed=random.randint(0, 1000), type="rank", n_labels=n_rooms)
+        print(init_X.shape)
+        print(init_y.shape)
 
-    # classes = [i for i in range(1, map_data["n_room"] + 1)]
-    # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=5)
-    # l2r.fit(init_X, init_y)
-    l2r.partial_fit(init_X, init_y, n_iter=5)
+        # classes = [i for i in range(1, map_data["n_room"] + 1)]
+        # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=5)
+        l2r.fit(init_X, init_y)
+        # l2r.partial_fit(init_X, init_y, n_iter=5)
 
-    evaluator = Evaluator(map_data["n_room"], verbose=True)
-    tracker = TraceTracker(verbose=True)
-    for voice in dl.voice_data_iterator(seed=5):
-        # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
-        X, y = pipe.prepare_training_data(map_data, voice)
-        rank_y = utils.label2rank(label=y, n_labels=map_data["n_room"])
-        
-        predicted_y = l2r.predict_proba(X)
-        evaluator.evaluate(y, predicted_y)
+        evaluator = Evaluator(n_rooms, verbose=True)
+        tracker = TraceTracker(verbose=True)
+        for voice in dl.voice_data_iterator(seed=random.randint(0, 1000)):
+            # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
+            X, y = pipe.prepare_training_data(map_data, voice)
+            rank_y = utils.label2rank(label=y, n_labels=n_rooms)
+            
+            predicted_y = l2r.predict_proba(X)
+            evaluator.evaluate(y, predicted_y)
+
+            if save_trace is not None:
+                tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
+
+            # l2r.partial_fit(X, rank_y, n_iter=5)
+            l2r.fit(X, rank_y)
 
         if save_trace is not None:
-            tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
+            tracker.dump(save_trace)
+        if save_history is not None:
+            evaluator.save_history(out_dir=save_history + "_" + str(t) + ".csv", type="csv")
 
-        l2r.partial_fit(X, rank_y, n_iter=5)
-        # l2r.fit(X, rank_y)
-
-    if save_trace is not None:
-        tracker.dump(save_trace)
-    if save_history is not None:
-        evaluator.save_history(out_dir="3room_history.csv", type="csv")
-    evaluator.plot_acc_history()
+        if t == n_trails - 1:
+            evaluator.plot_acc_history()
 
 
 def train_model():
@@ -233,12 +249,12 @@ def train_model():
         classification_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace, 
-            save_history=args.save_train_hist)
+            save_history=args.save_train_hist, n_trails=args.n_trails)
     elif args.mode == "rank":
         ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace,
-            save_history=args.save_train_hist)
+            save_history=args.save_train_hist, n_trails=args.n_trails)
 
 
 if __name__ == '__main__':
