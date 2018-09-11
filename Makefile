@@ -43,7 +43,7 @@ train:
 		--save_train_hist="3room_history" --n_trails=1
 
 visualize:
-	python ciessl_app/visualizer.py --data="data/results/HARAM-10" --out="acc_errorband" --plot="acc_variance"
+	python ciessl_app/visualizer.py --data="data/results/haram-conv-err" --out="acc_errorband" --plot="err_hist"
 
 test_enc:
 	python ciessl_app/tools/test_enc.py --dataset="data/stft_data/train/amp" \
