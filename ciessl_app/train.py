@@ -148,7 +148,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     """
     dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
     map_data = dl.load_map_info()
-    n_rooms = map_data["n_room"]
+    n_rooms = map_data["n_room"] - 1
     
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
@@ -161,7 +161,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         print(init_X.shape)
         print(init_y.shape)
 
-        classes = [i for i in range(1,  + 1)]
+        classes = [i for i in range(1, n_rooms + 1)]
         # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=10)
         l2r.fit(init_X, init_y)
 
@@ -185,9 +185,9 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         if eval_out_dir is not None:
             evaluator.save_history(out_dir=eval_out_dir, file_prefix=str(t), type="csv")
 
-        if t == n_trails - 1:
-            evaluator.plot_acc_history()
-            evaluator.plot_error_bar(n_bins=20)
+        # if t == n_trails - 1:
+        #     evaluator.plot_acc_history()
+        #     evaluator.plot_error_bar(n_bins=20)
     
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
@@ -221,7 +221,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
         evaluator = Evaluator(n_rooms, verbose=True)
         tracker = TraceTracker(verbose=True)
-        for voice in dl.voice_data_iterator(n_samples=1, seed=random.randint(0, 1000)):
+        for voice in dl.voice_data_iterator(seed=random.randint(0, 1000)):
             # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
             X, y = pipe.prepare_training_data(map_data, voice)
             rank_y = utils.label2rank(label=y, n_labels=n_rooms)
@@ -240,9 +240,9 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         if eval_out_dir is not None:
             evaluator.save_history(out_dir=eval_out_dir, file_prefix=str(t), type="csv")
 
-        if t == n_trails - 1:
-            evaluator.plot_acc_history()
-            evaluator.plot_error_bar(n_bins=30)
+        # if t == n_trails - 1:
+        #     evaluator.plot_acc_history()
+        #     evaluator.plot_error_bar(n_bins=30)
 
 
 def train_model():
