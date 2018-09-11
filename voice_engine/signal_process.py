@@ -67,7 +67,7 @@ def gcc_phat(sig, refsig, sample_rate, max_tau=None, interp=1):
     REFSIG = np.fft.rfft(refsig, n=n)
     R = SIG * np.conj(REFSIG)
 
-    cc = R / np.abs(R)
+    cc = R / (np.abs(R) + 0.00001)
     inv_cc = np.fft.irfft(cc, n=(interp * n))
 
     max_shift = int(interp * n / 2)
