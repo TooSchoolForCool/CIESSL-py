@@ -152,11 +152,6 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
-    if eval_out_dir is not None:
-        # check output directory if exists
-        if not os.path.exists(eval_out_dir):
-            os.makedirs(eval_out_dir)
-
     for t in range(0, n_trails):
         clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
         l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
@@ -188,13 +183,12 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         if save_trace is not None:
             tracker.dump(save_trace)
         if eval_out_dir is not None:
-            evaluator.save_history(file_prefix=eval_out_dir + "/" + str(t), type="csv")
+            evaluator.save_history(out_dir=eval_out_dir, file_prefix=str(t), type="csv")
 
         if t == n_trails - 1:
             evaluator.plot_acc_history()
             evaluator.plot_error_bar(n_bins=20)
     
-
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails):
@@ -206,11 +200,6 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     n_rooms = map_data["n_room"] - 1
 
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
-
-    if eval_out_dir is not None:
-        # check output directory if exists
-        if not os.path.exists(eval_out_dir):
-            os.makedirs(eval_out_dir)
 
     for t in range(0, n_trails):
         # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
@@ -232,7 +221,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
         evaluator = Evaluator(n_rooms, verbose=True)
         tracker = TraceTracker(verbose=True)
-        for voice in dl.voice_data_iterator(seed=random.randint(0, 1000)):
+        for voice in dl.voice_data_iterator(n_samples=1, seed=random.randint(0, 1000)):
             # print("sample %d: src %d: %r" % (cnt, voice["src_idx"], voice["src"]))
             X, y = pipe.prepare_training_data(map_data, voice)
             rank_y = utils.label2rank(label=y, n_labels=n_rooms)
@@ -249,7 +238,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         if save_trace is not None:
             tracker.dump(save_trace)
         if eval_out_dir is not None:
-            evaluator.save_history(file_prefix=eval_out_dir + "/" + str(t), type="csv")
+            evaluator.save_history(out_dir=eval_out_dir, file_prefix=str(t), type="csv")
 
         if t == n_trails - 1:
             evaluator.plot_acc_history()

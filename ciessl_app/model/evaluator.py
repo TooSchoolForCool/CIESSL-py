@@ -1,3 +1,6 @@
+import os
+import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -109,19 +112,25 @@ class Evaluator(object):
         plt.show()
 
 
-    def save_history(self, file_prefix, type="csv"):
+    def save_history(self, out_dir, file_prefix, type="csv"):
         if type == "csv":
-            self.dump2csv(file_prefix)
+            self.dump2csv(out_dir, file_prefix)
 
 
-    def dump2csv(self, file_prefix):
+    def dump2csv(self, out_dir, file_prefix):
+        if not os.path.exists(out_dir + "/acc"):
+            os.makedirs(out_dir+"/acc")
+
+        if not os.path.exists(out_dir + "/error"):
+            os.makedirs(out_dir+"/error")
+
         # accuracy
-        file_out = file_prefix + "_acc.csv"
+        file_out = out_dir + "/acc/" + file_prefix + "_acc.csv"
         np.savetxt(file_out, self.acc_history_, delimiter=",")
         print("[Evaluator]: Save Accuracy history to file {}".format(file_out))
 
         # errors counts
-        file_out = file_prefix + "_err.csv"
+        file_out = out_dir + "/error/" + file_prefix + "_err.csv"
         np.savetxt(file_out, self.error_history_, delimiter=",")
         print("[Evaluator]: Save Error history to file {}".format(file_out))
 
