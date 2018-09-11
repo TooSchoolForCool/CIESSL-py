@@ -1,5 +1,7 @@
 import argparse
 import random
+import os
+import sys
 
 import numpy as np
 from sklearn.neural_network import MLPRegressor, MLPClassifier
@@ -140,7 +142,7 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
 
 
 def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, save_history, n_trails):
+    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails):
     """
     Treat the task as a classification problem.
     """
@@ -149,6 +151,11 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     n_rooms = map_data["n_room"]
     
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
+
+    if eval_out_dir is not None:
+        # check output directory if exists
+        if not os.path.exists(eval_out_dir):
+            os.makedirs(eval_out_dir)
 
     for t in range(0, n_trails):
         clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
@@ -180,16 +187,17 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
         if save_trace is not None:
             tracker.dump(save_trace)
-        if save_history is not None:
-            evaluator.save_history(out_dir=save_history + "_" + str(t) + ".csv", type="csv")
+        if eval_out_dir is not None:
+            evaluator.save_history(file_prefix=eval_out_dir + "/" + str(t), type="csv")
 
         if t == n_trails - 1:
             evaluator.plot_acc_history()
+            evaluator.plot_error_bar(n_bins=20)
     
 
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, save_history, n_trails):
+    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails):
     """
     Treat the task as a ranking problem.
     """
@@ -198,6 +206,11 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     n_rooms = map_data["n_room"] - 1
 
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
+
+    if eval_out_dir is not None:
+        # check output directory if exists
+        if not os.path.exists(eval_out_dir):
+            os.makedirs(eval_out_dir)
 
     for t in range(0, n_trails):
         # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
@@ -235,11 +248,12 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
         if save_trace is not None:
             tracker.dump(save_trace)
-        if save_history is not None:
-            evaluator.save_history(out_dir=save_history + "_" + str(t) + ".csv", type="csv")
+        if eval_out_dir is not None:
+            evaluator.save_history(file_prefix=eval_out_dir + "/" + str(t), type="csv")
 
         if t == n_trails - 1:
             evaluator.plot_acc_history()
+            evaluator.plot_error_bar(n_bins=30)
 
 
 def train_model():
@@ -249,12 +263,12 @@ def train_model():
         classification_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace, 
-            save_history=args.save_train_hist, n_trails=args.n_trails)
+            eval_out_dir=args.save_train_hist, n_trails=args.n_trails)
     elif args.mode == "rank":
         ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace,
-            save_history=args.save_train_hist, n_trails=args.n_trails)
+            eval_out_dir=args.save_train_hist, n_trails=args.n_trails)
 
 
 if __name__ == '__main__':

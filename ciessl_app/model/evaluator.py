@@ -14,9 +14,13 @@ class Evaluator(object):
         self.verbose_ = verbose
 
         # scoreboard accuracy history (scoreboard / total_exp)
-        # a sequence of accuracy, each time when a new sample come in, the 
+        # A sequence of accuracy, each time when a new sample come in, the 
         # evaluator will generate a new accuracy record
         self.acc_history_ = []
+
+        # A sequence of error history
+        # If the rebot explore the room 3 times, then there are 2 error tries
+        self.error_history_ = []
 
         # number of experiments
         self.total_exp_ = 0
@@ -46,6 +50,7 @@ class Evaluator(object):
         
         self.total_exp_ += len(y)
         self.acc_history_.append([1.0 * score / self.total_exp_ for score in self.scoreboard_])
+        self.error_history_.append(self.n_rooms_ * self.total_exp_ - sum(self.scoreboard_))
 
         if self.verbose_:
             self.print_log_(y, predicted_y)
@@ -82,14 +87,43 @@ class Evaluator(object):
         plt.show()
 
 
-    def save_history(self, out_dir, type="csv"):
+    def plot_error_bar(self, n_bins=20):
+        errors = self.error_history_
+
+        # calculate number of errors for every n_bins samples
+        accum = []
+        x_title = []
+        for i in range(n_bins, len(errors), n_bins):
+            accum.append( errors[i] - errors[i - n_bins] )
+            x_title.append("%d ~ %d" % (i-n_bins+1, i))
+        if len(errors) % n_bins != 0:
+            accum.append( errors[-1] - errors[-(len(errors)%n_bins)] )
+            x_title.append("%d ~ %d" % (len(errors) - (len(errors)%n_bins) + 1, len(errors)))
+
+        idx = np.arange( len(accum) )
+        plt.bar(idx, height=accum)
+        plt.xticks(idx, x_title)
+
+        plt.ylabel("Number of Errors")
+        plt.title("Number of Errors Trendline")
+        plt.show()
+
+
+    def save_history(self, file_prefix, type="csv"):
         if type == "csv":
-            self.dump2csv(out_dir)
+            self.dump2csv(file_prefix)
 
 
-    def dump2csv(self, out_dir):
-        np.savetxt(out_dir, self.acc_history_, delimiter=",")
-        print("[Evaluator]: Save history to file {}".format(out_dir))
+    def dump2csv(self, file_prefix):
+        # accuracy
+        file_out = file_prefix + "_acc.csv"
+        np.savetxt(file_out, self.acc_history_, delimiter=",")
+        print("[Evaluator]: Save Accuracy history to file {}".format(file_out))
+
+        # errors counts
+        file_out = file_prefix + "_err.csv"
+        np.savetxt(file_out, self.error_history_, delimiter=",")
+        print("[Evaluator]: Save Error history to file {}".format(file_out))
 
 
     def find_target_room_(self, y):
@@ -127,6 +161,7 @@ class Evaluator(object):
         print("| y:\t%r" % (y))
         print("| pred:\t {}".format(predicted_y))
         print("| acc: %r" % (self.get_eval_result()))
+        print("| errors: {}".format(self.error_history_[-1]))
         print("-" * 80)
 
 

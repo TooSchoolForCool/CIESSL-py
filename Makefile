@@ -40,7 +40,7 @@ train:
 	python ciessl_app/train.py --voice_data="data/hand_vad_pickle/test/3Room" --map_data="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_3room.json" --mode="rank" --voice_feature="conv_enc" \
 		--voice_encoder="./data/model/stft_cae_subset_256.json" --map_feature="flooding" \
-		--save_train_hist="3room_history" --n_trails=10
+		--save_train_hist="3room_history" --n_trails=1
 
 visualize:
 	python ciessl_app/visualizer.py --data="data/results/HARAM-10" --out="acc_errorband" --plot="acc_variance"
