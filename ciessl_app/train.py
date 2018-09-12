@@ -192,7 +192,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
             l2r.fit(X, y)
 
         if save_trace is not None:
-            tracker.dump(save_trace)
+            tracker.dump(save_trace, str(t) + "_trace.json")
         if eval_out_dir is not None:
             evaluator.save_history(out_dir=eval_out_dir, file_prefix=str(t), type="csv")
 
@@ -247,13 +247,13 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
             l2r.fit(X, rank_y)
 
         if save_trace is not None:
-            tracker.dump(save_trace)
+            tracker.dump(save_trace, str(t) + "_trace.json")
         if eval_out_dir is not None:
             evaluator.save_history(out_dir=eval_out_dir, file_prefix=str(t), type="csv")
 
-        # if t == n_trails - 1:
-        #     evaluator.plot_acc_history()
-        #     evaluator.plot_error_bar(n_bins=30)
+        if t == n_trails - 1:
+            # evaluator.plot_acc_history()
+            evaluator.plot_error_bar(n_bins=10)
 
 
 def train_model():

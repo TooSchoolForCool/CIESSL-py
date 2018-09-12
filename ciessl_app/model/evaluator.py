@@ -90,7 +90,7 @@ class Evaluator(object):
         plt.show()
 
 
-    def plot_error_bar(self, n_bins=20):
+    def plot_error_bar(self, n_bins=10):
         errors = self.error_history_
 
         # calculate number of errors for every n_bins samples
@@ -103,13 +103,15 @@ class Evaluator(object):
             accum.append( errors[-1] - errors[-(len(errors)%n_bins)] )
             x_title.append("%d ~ %d" % (len(errors) - (len(errors)%n_bins) + 1, len(errors)))
 
-        idx = np.arange( len(accum) )
-        plt.bar(idx, height=accum)
-        plt.xticks(idx, x_title)
+        print(accum)
 
-        plt.ylabel("Number of Errors")
-        plt.title("Number of Errors Trendline")
-        plt.show()
+        # idx = np.arange( len(accum) )
+        # plt.bar(idx, height=accum)
+        # plt.xticks(idx, x_title)
+
+        # plt.ylabel("Number of Errors")
+        # plt.title("Number of Errors Trendline")
+        # plt.show()
 
 
     def save_history(self, out_dir, file_prefix, type="csv"):

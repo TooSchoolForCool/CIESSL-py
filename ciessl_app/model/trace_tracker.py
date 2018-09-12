@@ -1,3 +1,6 @@
+import sys
+import os
+
 import numpy as np
 import json
 
@@ -31,8 +34,12 @@ class TraceTracker(object):
         self.trace_.append(trail)
 
 
-    def dump(self, out_dir):
-        with open(out_dir, 'w') as outfile:
+    def dump(self, out_dir, file_name):
+        # check output directory if exists
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+
+        with open(out_dir + "/" + file_name, 'w') as outfile:
             json.dump(self.trace_, outfile)
 
-        print("[TraceTracker]: Save trace to json file {}".format(out_dir))
+        print("[TraceTracker]: Save trace to json file {}".format(out_dir + "/" + file_name))
