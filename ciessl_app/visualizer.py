@@ -22,6 +22,7 @@ def arg_parser():
         "--data",
         dest="data",
         type=str,
+        nargs='+',
         required=True,
         help="Input data directory"
     )
@@ -34,7 +35,15 @@ def arg_parser():
         help="output directory"
     )
 
-    plot_type = ["acc_variance", "err_hist"]
+    parser.add_argument(
+        "--name_tag",
+        dest="name_tag",
+        type=str,
+        nargs='+',
+        help="Name tag for each dataset"
+    )
+
+    plot_type = ["acc_variance", "err_hist", "cmp_acc"]
     parser.add_argument(
         "--plot",
         dest="plot",
@@ -48,6 +57,10 @@ def arg_parser():
     # check validation
     if args.plot not in plot_type:
         print("[ERROR] only support plot type {}".format(plot_type))
+        raise
+
+    if "cmp" in args.plot and not args.name_tag:
+        print("[ERROR] must specify reference data directory {}".format(plot_type))
         raise
 
     return args
@@ -64,12 +77,13 @@ def load_file_path(target_dir, ext):
 
 
 def plot_err_histogram(data_path, output):
+    data_path = data_path[0]
     file_dirs = load_file_path(data_path, "csv")
 
     # get data dimension
     tmp = np.genfromtxt(file_dirs[0], delimiter=',')
     n_samples = len(tmp)
-    n_bins = 30
+    n_bins = 10
 
     # create title for x-axis
     # ["1 ~ 20", "21 ~ 40", ...]
@@ -110,11 +124,96 @@ def plot_err_histogram(data_path, output):
     
     # plot error histogram
     sns.set(style="whitegrid")
-    sns.catplot(x="Number of Samples", y="Error Counts", kind="bar", data=df)
+    sns.catplot(x="Number of Samples", y="Error Counts", kind="bar", data=df, color="b")
+    plt.show()
+
+
+def plot_acc_cmp(data_path, output, name_tag):
+    sns.set(font_scale=1.5)
+    sns.set_style('whitegrid', {"axes.spines.right": True, "axes.spines.top": True})
+
+    # data_dict = {
+    #     "n_samples" : [],
+    #     "acc" : [],
+    #     "Model" : [],
+    #     "Event" : []
+    # }
+    # event_list = ["Explore %d time(s)" % (i) for i in range(1, 3 + 1)]
+
+    # for data_dir, tag in zip(data_path, name_tag):
+    #     file_dirs = load_file_path(data_dir, "csv")
+    #     for file in file_dirs:
+    #         data = np.genfromtxt(file, delimiter=',')
+    #         for i, row in enumerate(data):
+    #             for j, item in enumerate(row[:2]):
+    #                 data_dict["n_samples"].append(i + 1)
+    #                 data_dict["Model"].append(tag)
+    #                 data_dict["acc"].append(item)
+    #                 data_dict["Event"].append(event_list[j])
+
+    # df = pd.DataFrame(data_dict)
+
+    # sns.relplot(x="n_samples", y="acc", hue="Model", row="Event", kind="line", data=df)
+    # plt.ylabel("Success Rate [%]")
+    # plt.xlabel("Number of Samples")
+    # plt.ylim(0, 1.0)
+    # plt.xlim(0, 114)
+
+    data_dict = {
+        "n_samples" : [],
+        "acc" : [],
+        "Model" : [],
+    }
+
+    for data_dir, tag in zip(data_path, name_tag):
+        file_dirs = load_file_path(data_dir, "csv")
+        for file in file_dirs:
+            data = np.genfromtxt(file, delimiter=',')
+            for i, row in enumerate(data):
+                data_dict["n_samples"].append(i + 1)
+                data_dict["Model"].append(tag)
+                data_dict["acc"].append(row[0])
+
+    df = pd.DataFrame(data_dict)
+
+    plt.subplot(2, 1, 1)
+    sns.lineplot(x="n_samples", y="acc", hue="Model", data=df)
+    plt.ylabel("Success Rate [%]")
+    plt.xlabel("")
+    plt.ylim(0, 1.0)
+    plt.xlim(0, 114)
+
+    data_dict = {
+        "n_samples" : [],
+        "acc" : [],
+        "Model" : [],
+    }
+
+    for data_dir, tag in zip(data_path, name_tag):
+        file_dirs = load_file_path(data_dir, "csv")
+        for file in file_dirs:
+            data = np.genfromtxt(file, delimiter=',')
+            for i, row in enumerate(data):
+                data_dict["n_samples"].append(i + 1)
+                data_dict["Model"].append(tag)
+                data_dict["acc"].append(row[1])
+
+    df = pd.DataFrame(data_dict)
+
+    plt.subplot(2, 1, 2)
+    sns.lineplot(x="n_samples", y="acc", hue="Model", data=df)
+    plt.ylabel("Success Rate [%]")
+    plt.xlabel("Number of Samples")
+    plt.ylim(0, 1.0)
+    plt.xlim(0, 114)
+    
+    # plt.rcParams["axes.spines.right"] = True
+    # plt.rcParams["axes.spines.top"] = True
     plt.show()
 
 
 def plot_acc_with_variance(data_path, output):
+    data_path = data_path[0]
     file_dirs = load_file_path(data_path, "csv")
 
     """
@@ -158,6 +257,8 @@ def main():
         plot_acc_with_variance(args.data, args.out)
     elif args.plot == "err_hist":
         plot_err_histogram(args.data, args.out)
+    elif args.plot == "cmp_acc":
+        plot_acc_cmp(args.data, args.out, args.name_tag)
     else:
         print("[ERROR] main(): no such encoder {}".format(args.encoder))
         raise
