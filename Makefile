@@ -39,7 +39,7 @@ train_autoencoder:
 train:
 	python ciessl_app/train.py --voice_data="data/hand_vad_pickle/test/3Room" --map_data="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_3room.json" --mode="rank" --voice_feature="conv_enc" \
-		--voice_encoder="./data/model/stft_cae_subset_256.json" --map_feature="flooding" \
+		--voice_encoder="./data/model/stft_cae_subset_256.json" --map_feature="flooding" --n_mic=8 \
 		--save_train_hist="data/results/HARAM+AE" --n_trails=100
 
 visualize:

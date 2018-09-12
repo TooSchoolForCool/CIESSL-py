@@ -102,6 +102,13 @@ def arg_parser():
         default=1,
         help="Number of trails for experiments"
     )
+    parser.add_argument(
+        "--n_mic",
+        dest="n_mic",
+        type=int,
+        default=16,
+        help="Number of microphoen used"
+    )
 
     args = parser.parse_args()
 
@@ -113,6 +120,10 @@ def arg_parser():
             print("[ERROR] train: Must specify model path when using autoencoder for" 
                 + " extracting voice feature")
             raise
+
+    if args.n_mic not in [16, 8, 4]:
+        print("[ERROR] does not support {}-mic configuration, n_mic should be 16, 8 or 4".format(args.n_mic))
+        raise
 
     return args
 
@@ -142,11 +153,11 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
 
 
 def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails):
+    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic):
     """
     Treat the task as a classification problem.
     """
-    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
+    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, n_mic, verbose=False)
     map_data = dl.load_map_info()
     n_rooms = map_data["n_room"] - 1
     
@@ -191,11 +202,11 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails):
+    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic):
     """
     Treat the task as a ranking problem.
     """
-    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, verbose=False)
+    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, n_mic, verbose=False)
     map_data = dl.load_map_info()
     n_rooms = map_data["n_room"] - 1
 
@@ -252,12 +263,12 @@ def train_model():
         classification_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace, 
-            eval_out_dir=args.save_train_hist, n_trails=args.n_trails)
+            eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic)
     elif args.mode == "rank":
         ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace,
-            eval_out_dir=args.save_train_hist, n_trails=args.n_trails)
+            eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic)
 
 
 if __name__ == '__main__':

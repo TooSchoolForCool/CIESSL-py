@@ -13,7 +13,7 @@ class DataLoader(object):
     """
     Handle data loading and parsing.
     """
-    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir, verbose=False, 
+    def __init__(self, voice_data_dir, map_data_dir, pos_tf_dir, n_mic=16, verbose=False, 
         all_in=True, is_normalize=False):
         """
         Store voice dataset directory and map data directory
@@ -24,6 +24,7 @@ class DataLoader(object):
             map_data_dir (string): a specific file path to a .json file
                 which stores the map information
             pos_tf_dir (string): directory of position tranform config file
+            n_mic (int): number of microphones in a microphone array
             verbose (bool): whether print out verbose info
             all_in (bool): load whole dataset into memory at a time
         """
@@ -31,6 +32,7 @@ class DataLoader(object):
         self.voice_file_dirs_ = []
         self.dataset_ = None
         self.is_normalize_ = is_normalize
+        self.n_mic_ = n_mic
 
         for file in os.listdir(voice_data_dir):
             if file.endswith(".pickle"):
@@ -113,17 +115,18 @@ class DataLoader(object):
 
         n_samples = len(self.voice_file_dirs_) if n_samples is None else n_samples
 
+        interval = 16 / self.n_mic_
         for i in idx[:n_samples]:
             # load voice pickle file
             # voice is store as a np.ndarray (frames, n_channels)
 
             if self.dataset_ is None:
-                voice_frames = np.load(self.voice_file_dirs_[i])
-            else:
-                voice_frames = self.dataset_[i]
+                voice_frames = np.load(self.voice_file_dirs_[i])[:, 0::interval]
                 if self.is_normalize_:
                     voice_frames = normalize(voice_frames)
-
+            else:
+                voice_frames = self.dataset_[i]
+                
             info = self.__parse_voice_filename(self.voice_file_dirs_[i])
 
             data = {}
@@ -269,8 +272,10 @@ class DataLoader(object):
 
     def load_whole_dataset(self):
         self.dataset_ = []
+        interval = 16 / self.n_mic_
+
         for file in self.voice_file_dirs_:
-            data = np.load(file)
+            data = np.load(file)[:, 0::interval]
             if self.is_normalize_:
                 data = normalize(data)
 

@@ -277,7 +277,8 @@ class Pipeline(object):
     def __conv_encode_voice(self, frame_stack, samplerate):
         # calculate log-scale normalized stft
         voice_stft = []
-        for i in range(0, 16):
+        n_channels = frame_stack.shape[1]
+        for i in range(0, n_channels):
             _, _, amp, phase = stft(frame_stack[:24000, i], samplerate, nfft=1024, segment_size=256, 
                 overlap_size=224)
             cropped = amp[:255, :255]
@@ -293,7 +294,7 @@ class Pipeline(object):
             voice_stft = voice_stft.cuda()
 
         code = self.voice_encoder_.encode(voice_stft)
-        # flatten tensor (16, x, y, z) ===> (16, x*y*z)
+        # flatten tensor (n_channels, x, y, z) ===> (n_channels, x*y*z)
         code = code.view(code.size(0), -1)
 
         # convert code to numpy.ndarray (n_feature, )
