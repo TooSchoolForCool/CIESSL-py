@@ -121,7 +121,7 @@ def arg_parser():
                 + " extracting voice feature")
             raise
 
-    if args.n_mic not in [16, 8, 4]:
+    if args.n_mic not in [16, 8, 4, 2]:
         print("[ERROR] does not support {}-mic configuration, n_mic should be 16, 8 or 4".format(args.n_mic))
         raise
 
