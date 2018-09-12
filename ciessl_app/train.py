@@ -109,6 +109,13 @@ def arg_parser():
         default=16,
         help="Number of microphoen used"
     )
+    parser.add_argument(
+        "--model_type",
+        dest="model_type",
+        type=str,
+        required=True,
+        help="Define learning model type"
+    )
 
     args = parser.parse_args()
 
@@ -152,8 +159,39 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
     return pipe
 
 
+def create_model(model_type, n_rooms):
+    if model_type == "mlp":
+        model = MLPClassifier(solver="adam", learning_rate_init=0.0001)
+    elif model_type == "svm":
+        model = SGDClassifier(loss="hinge", alpha=0.01, fit_intercept=True, learning_rate="optimal")
+    elif model_type == "haram":
+        model = MLARAM(vigilance=0.9, threshold=0.02)
+    elif model_type == "rank_fogd":
+        model = RankFOGD(n_classes=n_rooms, eta=1e-3, D=5000, sigma=8.0)
+    elif model_type == "rank_clf":
+        model = RankCLF(n_classes=n_rooms, C=1.0, n_iter=1)
+    elif model_type == "mlknn":
+        model = MLkNN(k=10)
+    else:
+        print("[ERROR] Do not support type {}".format(type))
+        raise
+
+    return model
+
+
+def update_model(model, model_type, X, y, n_rooms=None):
+    if model_type in ["haram", "rank_clf", "mlknn"]:
+        model.fit(X, y)
+    elif model_type in ["mlp", "rank_fogd", "svm"]:
+        if n_rooms is not None:
+            classes = [i for i in range(1, n_rooms + 1)]
+            model.partial_fit(X, y, classes=classes, n_iter=1)
+        else:
+            model.partial_fit(X, y, n_iter=1)
+
+
 def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic):
+    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic, model_type):
     """
     Treat the task as a classification problem.
     """
@@ -164,7 +202,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     for t in range(0, n_trails):
-        clf = MLPClassifier(solver="adam", learning_rate_init=0.0001)
+        clf = create_model(model_type, n_rooms)
         l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
         # preparing init training set
@@ -172,9 +210,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         print(init_X.shape)
         print(init_y.shape)
 
-        classes = [i for i in range(1, n_rooms + 1)]
-        # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=10)
-        l2r.fit(init_X, init_y)
+        update_model(l2r, model_type, init_X, init_y, n_rooms)
 
         evaluator = Evaluator(n_rooms, verbose=True)
         tracker = TraceTracker(verbose=True)
@@ -188,8 +224,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
             if save_trace is not None:
                 tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
                 
-            # l2r.partial_fit(X, y, n_iter=10)
-            l2r.fit(X, y)
+            update_model(l2r, model_type, init_X, init_y)
 
         if save_trace is not None:
             tracker.dump(save_trace, str(t) + "_trace.json")
@@ -202,7 +237,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic):
+    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic, model_type):
     """
     Treat the task as a ranking problem.
     """
@@ -214,10 +249,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
 
     for t in range(0, n_trails):
         # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
-        # clf = MLkNN(k=10)
-        clf = MLARAM(vigilance=0.9, threshold=0.02)
-        # clf = RankCLF(n_classes=3, C=1.0, n_iter=1)
-        # clf = RankFOGD(n_classes=4, eta=1e-3, D=5000, sigma=8.0)
+        clf = create_model(model_type, n_rooms)
         l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
         # preparing init training set
@@ -225,10 +257,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         print(init_X.shape)
         print(init_y.shape)
 
-        # classes = [i for i in range(1, map_data["n_room"] + 1)]
-        # l2r.partial_fit(init_X, init_y, classes=classes, n_iter=5)
-        l2r.fit(init_X, init_y)
-        # l2r.partial_fit(init_X, init_y, n_iter=5)
+        update_model(l2r, model_type, init_X, init_y)
 
         evaluator = Evaluator(n_rooms, verbose=True)
         tracker = TraceTracker(verbose=True)
@@ -243,17 +272,16 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
             if save_trace is not None:
                 tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
 
-            # l2r.partial_fit(X, rank_y, n_iter=5)
-            l2r.fit(X, rank_y)
+            update_model(l2r, model_type, X, rank_y)
 
         if save_trace is not None:
             tracker.dump(save_trace, str(t) + "_trace.json")
         if eval_out_dir is not None:
             evaluator.save_history(out_dir=eval_out_dir, file_prefix=str(t), type="csv")
 
-        if t == n_trails - 1:
-            # evaluator.plot_acc_history()
-            evaluator.plot_error_bar(n_bins=10)
+        # if t == n_trails - 1:
+        #     evaluator.plot_acc_history()
+        #     evaluator.plot_error_bar(n_bins=10)
 
 
 def train_model():
@@ -263,12 +291,14 @@ def train_model():
         classification_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace, 
-            eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic)
+            eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic,
+            model_type=args.model_type)
     elif args.mode == "rank":
         ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace,
-            eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic)
+            eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic,
+            model_type=args.model_type)
 
 
 if __name__ == '__main__':
