@@ -6,6 +6,8 @@
 examples/*.wav
 # ignore point cloud data
 *.ply
+# ignore psd and png files
+demo/simulation_screen*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
