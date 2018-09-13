@@ -88,7 +88,7 @@ def plot_err_histogram(data_path, output):
     # create title for x-axis
     # ["1 ~ 20", "21 ~ 40", ...]
     x_title = []
-    for i in range(n_bins, n_samples, n_bins):
+    for i in range(n_bins, n_samples + 1, n_bins):
         x_title.append("%d ~ %d" % (i-n_bins+1, i))
     if n_samples % n_bins != 0:
         x_title.append("%d ~ %d" % (n_samples - (n_samples%n_bins) + 1, n_samples))
@@ -111,8 +111,8 @@ def plot_err_histogram(data_path, output):
     }
     for file in file_dirs:
         data = np.genfromtxt(file, delimiter=',')
-        for i in range(n_bins, n_samples, n_bins):
-            cnt = data[i] - data[i - n_bins]
+        for i in range(n_bins, n_samples + 1, n_bins):
+            cnt = data[i-1] - data[i - n_bins]
             data_dict["Error Counts"].append(cnt)
             data_dict["Number of Samples"].append(x_title[i / n_bins - 1])
         if n_samples % n_bins != 0:
