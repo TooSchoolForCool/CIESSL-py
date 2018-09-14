@@ -39,12 +39,11 @@ train_autoencoder:
 train:
 	python ciessl_app/train.py --voice_data="data/hand_vad_pickle/test/3Room" --map_data="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_3room.json" --mode="rank" --voice_feature="conv_enc" --model_type="haram" \
-		--voice_encoder="./data/model/stft_cae_subset_256.json" --map_feature="flooding" --n_mic=16 \
-		--save_train_hist="data/results/HARAM+AE" --n_trails=1 --save_trace="data/results/HARAM+AE/trace"
+		--voice_encoder="./data/model/stft_cae_subset_256.json" --map_feature="flooding" --n_mic=16 --lm_param=0.9 \
+		--save_train_hist="data/results/HARAM+AE" --save_trace="data/results/HARAM+AE/trace" --n_trails=1 
 
 visualize:
-	python ciessl_app/visualizer.py --data "data/results/HARAM+AE_16mic/acc" "data/results/haram-gcc/acc" --out="acc_errorband" --plot="acc_variance" \
-		--name_tag "HARAM+AE (Ours)" "HARAM+GCC"
+	python ciessl_app/visualizer.py --data "result/HARAM-AE-8/acc" --out="acc_errorband" --plot="acc_variance"
 
 test_enc:
 	python ciessl_app/tools/test_enc.py --dataset="data/stft_data/train/amp" \

@@ -117,6 +117,13 @@ def arg_parser():
         required=True,
         help="Define learning model type"
     )
+    parser.add_argument(
+        "--lm_param",
+        dest="lm_param",
+        type=float,
+        default=None,
+        help="Learning Model Parameter"
+    )
 
     args = parser.parse_args()
 
@@ -160,13 +167,15 @@ def init_pipeline(voice_feature, map_feature, voice_encoder_path):
     return pipe
 
 
-def create_model(model_type, n_rooms):
+def create_model(model_type, n_rooms, lm_param=None):
     if model_type == "mlp":
         model = MLPClassifier(solver="adam", learning_rate_init=0.0001)
     elif model_type == "svm":
         model = SGDClassifier(loss="modified_huber", alpha=0.001, learning_rate="optimal")
     elif model_type == "haram":
-        model = MLARAM(vigilance=0.9, threshold=0.02)
+        vigilance = lm_param
+        print("[INFO] HARAM set vigilance to {}".format(vigilance))
+        model = MLARAM(vigilance=vigilance, threshold=0.02)
     elif model_type == "rank_fogd":
         model = RankFOGD(n_classes=n_rooms, eta=1e-3, D=5000, sigma=8.0)
     elif model_type == "rank_clf":
@@ -192,7 +201,7 @@ def update_model(model, model_type, X, y, n_rooms=None):
 
 
 def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic, model_type):
+    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic, model_type, lm_param):
     """
     Treat the task as a classification problem.
     """
@@ -203,7 +212,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     for t in range(0, n_trails):
-        clf = create_model(model_type, n_rooms)
+        clf = create_model(model_type, n_rooms, lm_param)
         l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
         # preparing init training set
@@ -238,7 +247,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     
 
 def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
-    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic, model_type):
+    map_feature, voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic, model_type, lm_param):
     """
     Treat the task as a ranking problem.
     """
@@ -249,8 +258,7 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
     pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
 
     for t in range(0, n_trails):
-        # clf = RankSVM(max_iter=100, alpha=0.01, loss='squared_loss')
-        clf = create_model(model_type, n_rooms)
+        clf = create_model(model_type, n_rooms, lm_param)
         l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
         # preparing init training set
@@ -293,13 +301,13 @@ def train_model():
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace, 
             eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic,
-            model_type=args.model_type)
+            model_type=args.model_type, lm_param=args.lm_param)
     elif args.mode == "rank":
         ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace,
             eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic,
-            model_type=args.model_type)
+            model_type=args.model_type, lm_param=args.lm_param)
 
 
 if __name__ == '__main__':
