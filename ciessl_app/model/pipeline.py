@@ -506,7 +506,9 @@ class Pipeline(object):
         for i in range(0, n_channels):
             for j in range(i+1, n_channels):
                 gccfb_feature = gccfb(frame_stack[:, i], frame_stack[:, j], samplerate, n_mels=2, f_size=25)
-                ret.append(gccfb_feature)
+                print(gccfb_feature.shape)
+                exit(0)
+                ret.append(gccfb_feature.flatten())
 
         ret = np.asarray(ret).flatten()
         # (gccfb_size, n_pairs)

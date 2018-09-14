@@ -147,7 +147,7 @@ def gccfb(sig, refsig, sample_rate, max_tau=None, interp=1, n_mels=2, f_size=25)
             feat = sig[c - f_size : c + f_size]
         gccfb_feature.append(feat)
 
-    gccfb_feature = np.asarray(gccfb_feature).flatten()
+    gccfb_feature = np.asarray(gccfb_feature)
 
     return gccfb_feature
 
