@@ -4,6 +4,7 @@ import os
 import sys
 
 import numpy as np
+from sklearn.linear_model import SGDClassifier
 from sklearn.neural_network import MLPRegressor, MLPClassifier
 from skmultilearn.adapt import MLkNN, MLARAM
 
@@ -60,7 +61,7 @@ def arg_parser():
         help="choose learning mode: [clf, rank]"
     )
 
-    voice_feature = ["gccphat", "stft", "enc", "gcc_enc", "conv_enc"]
+    voice_feature = ["gccphat", "gccfb", "stft", "enc", "gcc_enc", "conv_enc"]
     parser.add_argument(
         "--voice_feature",
         dest="voice_feature",
@@ -163,7 +164,7 @@ def create_model(model_type, n_rooms):
     if model_type == "mlp":
         model = MLPClassifier(solver="adam", learning_rate_init=0.0001)
     elif model_type == "svm":
-        model = SGDClassifier(loss="hinge", alpha=0.01, fit_intercept=True, learning_rate="optimal")
+        model = SGDClassifier(loss="modified_huber", alpha=0.001, learning_rate="optimal")
     elif model_type == "haram":
         model = MLARAM(vigilance=0.9, threshold=0.02)
     elif model_type == "rank_fogd":
@@ -206,7 +207,7 @@ def classification_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         l2r = OnlineClassifier(clf, q_size=50, shuffle=True)
 
         # preparing init training set
-        init_X, init_y = utils.init_training_set(dl, pipe, n_samples=5, seed=random.randint(0, 1000), type="clf")
+        init_X, init_y = utils.init_training_set(dl, pipe, n_samples=1, seed=random.randint(0, 1000), type="clf")
         print(init_X.shape)
         print(init_y.shape)
 

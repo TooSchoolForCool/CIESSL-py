@@ -1,4 +1,5 @@
 import numpy as np
+import librosa
 from scipy import signal as sig
 
 import global_var
@@ -86,6 +87,69 @@ def gcc_phat(sig, refsig, sample_rate, max_tau=None, interp=1):
     center = max_shift + shift
 
     return tau, inv_cc, center
+
+
+def gccfb(sig, refsig, sample_rate, max_tau=None, interp=1, n_mels=2, f_size=25):
+    """
+    This function computes the offset between the signal sig and the reference signal refsig
+    using the Generalized Cross Correlation - Phase Transform (GCC-PHAT)method.
+
+    Args:
+        sig ( np.ndarray (n_frames, ) ): the first voice signal
+        refsig ( np.ndarray (n_frames, ) ): the second voice signal (reference signal)
+        sample_rate (int): sample rate of the signal
+        max_tau (float): pre-calculated maximum time delay
+        interp (int): interpolation
+        f_size (int): feature size
+
+    Returns:
+        tau (float): Time Delay
+        inv_cc (np.array (gcc_phat_len, )): cross-correlation between signals
+        center (int): the index of the center, where TDOA is 0, of the cross-correlation
+            coefficients
+    """
+    
+    # make sure the length for the FFT is larger or equal than len(sig) + len(refsig)
+    n = sig.shape[0] + refsig.shape[0]
+    melW=librosa.filters.mel(sr=sample_rate, n_fft=n, n_mels=n_mels, fmin=100, fmax=8000)
+
+    # Generalized Cross Correlation Phase Transform
+    SIG = np.fft.rfft(sig, n=n)
+    REFSIG = np.fft.rfft(refsig, n=n)
+
+    R = SIG * np.conj(REFSIG)
+    cc = R / (np.abs(R) + 0.00001)
+    mel_cc = melW * cc
+
+    inv_cc = np.fft.irfft(mel_cc, n=(interp * n))
+
+    max_shift = int(interp * n / 2)
+    if max_tau:
+        max_shift = np.minimum(int(interp * sample_rate * max_tau), max_shift)
+
+    inv_cc = np.concatenate((inv_cc[-max_shift:], inv_cc[:max_shift+1]), axis=1)
+
+    # find max cross correlation index
+    shift = np.argmax(np.abs(inv_cc), axis=1) - max_shift
+
+    tau = shift / float(interp * sample_rate)
+    center = max_shift + shift
+    
+    gccfb_feature = []
+
+    for sig, c in zip(inv_cc, center):
+        # crop gccfb features
+        if c - f_size < 0:
+            feat = sig[0 : 2 * f_size]
+        elif c + f_size >= sig.shape[0]:
+            feat = sig[-2 * f_size : ]
+        else:
+            feat = sig[c - f_size : c + f_size]
+        gccfb_feature.append(feat)
+
+    gccfb_feature = np.asarray(gccfb_feature).flatten()
+
+    return gccfb_feature
 
 
 ################################################################

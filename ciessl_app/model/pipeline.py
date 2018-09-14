@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 
-from voice_engine.signal_process import stft, gcc_phat
+from voice_engine.signal_process import stft, gcc_phat, gccfb
 from voice_engine.utils import view_spectrum, view_gccphat
 
 sys.path.append(os.path.abspath(os.path.join("..")))
@@ -92,6 +92,8 @@ class Pipeline(object):
             sound_feature = self.__extract_stft(frame_stack, samplerate)
         elif self.voice_feature_ == "gccphat":
             sound_feature = self.__extract_gccphat(frame_stack, samplerate).flatten()
+        elif self.voice_feature_ == "gccfb":
+            sound_feature = self.__extract_gccfb(frame_stack, samplerate)
         elif self.voice_feature_ == "enc":
             sound_feature = self.__encode_voice(frame_stack)
         elif self.voice_feature_ == "gcc_enc":
@@ -170,6 +172,8 @@ class Pipeline(object):
             sound_feature = self.__extract_stft(frame_stack, samplerate)
         elif self.voice_feature_ == "gccphat":
             sound_feature = self.__extract_gccphat(frame_stack, samplerate).flatten()
+        elif self.voice_feature_ == "gccfb":
+            sound_feature = self.__extract_gccfb(frame_stack, samplerate)
         elif self.voice_feature_ == "enc":
             sound_feature = self.__encode_voice(frame_stack)
         elif self.voice_feature_ == "gcc_enc":
@@ -483,6 +487,31 @@ class Pipeline(object):
         # gccphat_pattern[:, 0]: pair 0 gccphat feature
         gccphat_pattern = np.asarray(gccphat_pattern).T
         return gccphat_pattern
+
+
+    def __extract_gccfb(self, frame_stack, samplerate):
+        """
+        Calculate gccphat pattern on mel-scale filter bank
+
+        Args:
+            frame_stack (np.ndarray (n_samples, n_chennals)): Audio frame stack
+            samplerate (int): audio source sample rate
+
+        Returns:
+            gccphat_pattern (np.ndarray (gccphat_size, n_pairs)): gcc_phat pattern feature
+        """
+        n_channels = frame_stack.shape[1]
+
+        ret = []
+        for i in range(0, n_channels):
+            for j in range(i+1, n_channels):
+                gccfb_feature = gccfb(frame_stack[:, i], frame_stack[:, j], samplerate, n_mels=2, f_size=25)
+                ret.append(gccfb_feature)
+
+        ret = np.asarray(ret).flatten()
+        # (gccfb_size, n_pairs)
+        # gccfb_pattern[:, 0]: pair 0 gccphat feature
+        return ret
 
 
     def __shrink_map(self, img, kernel_size=(3, 3)):
