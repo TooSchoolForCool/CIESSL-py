@@ -42,6 +42,9 @@ train_autoencoder:
 	python ciessl_app/train_autoencoder.py --data="data/conv_code_256_16" --encoder="denoise_ae" \
 		--out="denoise_ae_inner.model"
 
+train_gccfb:
+	python ciessl_app/train_gccfb.py --data="data/gccfb" --map="data/map/map_feature.pickle"
+	
 train:
 	python ciessl_app/train.py --voice_data="data/hand_vad_pickle/test/3Room" --map_data="data/map/bh9f_lab_map.json" \
 		--config="ciessl_app/config/bh9f_3room.json" --mode="rank" --voice_feature="gccfb" --model_type="haram" \
