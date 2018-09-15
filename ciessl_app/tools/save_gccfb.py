@@ -73,7 +73,7 @@ def save_gccphat2file(voice_data_dir, map_data_dir, pos_tf_dir, out_path):
         for i in range(0, n_channels):
             for j in range(i+1, n_channels):
                 gccfb_pair = gccfb(frames[:, i], frames[:, j], samplerate, n_mels=40, f_size=20)
-                gccfb_feature.append(gccfb_pair.flatten())
+                gccfb_feature.append(gccfb_pair)
         gccfb_feature = np.asarray(gccfb_feature)
 
         json_data = {"gccfb" : gccfb_feature, "room_id" : room_id}
