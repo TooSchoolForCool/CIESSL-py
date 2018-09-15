@@ -43,7 +43,7 @@ train_autoencoder:
 		--out="denoise_ae_inner.model"
 
 train_gccfb:
-	python ciessl_app/train_gccfb.py --data="data/gccfb" --map="data/map/map_feature.pickle"
+	python ciessl_app/train_gccfb.py --data="data/gccfb" --map="data/map/bh9f_lab_map.json"
 	
 train:
 	python ciessl_app/train.py --voice_data="data/hand_vad_pickle/test/3Room" --map_data="data/map/bh9f_lab_map.json" \
@@ -52,7 +52,7 @@ train:
 		--save_train_hist="data/results/HARAM+AE" --save_trace="data/results/HARAM+AE/trace" --n_trails=1 
 
 visualize:
-	python ciessl_app/visualizer.py --data "results/HARAM-AE-8mic-85/acc" --out="acc_errorband" --plot="acc_variance"
+	python ciessl_app/visualizer.py --data "HARAM-GCCFB/acc" --out="acc_errorband" --plot="acc_variance"
 
 test_enc:
 	python ciessl_app/tools/test_enc.py --dataset="data/stft_data/train/amp" \
