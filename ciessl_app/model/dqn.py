@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import random
 
 import numpy as np
 import torch
@@ -9,25 +10,27 @@ import torch.nn.functional as F
 import gym
 
 
-target_replace_iter = 100
-memory_capacity = 2000
+target_replace_iter = 5
+memory_capacity = 5
 lr = 0.01
-batch_size = 32
+batch_size = 4
 epsilon = 0.9
 gamma = 0.9
-
 
 class q_net(nn.Module):
     def __init__(self, n_states, n_actions, hidden=50):
         super(q_net, self).__init__()
+        if hidden < n_states:
+            hidden = 2 * n_states
+        
         self.fc = nn.Sequential(
             nn.Linear(n_states, hidden),
             nn.ReLU(True),
             nn.Linear(hidden, n_actions)
         )
         
-        nn.init.normal(self.fc[0].weight, std=0.1) # 使用标准差是 0.1 的正态分布初始化
-        nn.init.normal(self.fc[2].weight, std=0.1) # 使用标准差是 0.1 的正态分布初始化
+        nn.init.normal(self.fc[0].weight, std=0.1)
+        nn.init.normal(self.fc[2].weight, std=0.1)
         
     def forward(self, x):
         actions_value = self.fc(x)
@@ -49,22 +52,31 @@ class DQN(object):
         self.n_actions_ = n_actions
  
     def choose_action(self, s):
-        '''
-        根据输入的状态得到所有可行动作的价值估计
-        '''
         n_actions = self.n_actions_
         s = Variable(torch.unsqueeze(torch.FloatTensor(s), 0))
         # input only one sample
-        if np.random.uniform() < epsilon:  # greedy 贪婪算法
+        if np.random.uniform() < epsilon:
             actions_value = self.eval_net(s)
             action = torch.max(actions_value, 1)[1].data.numpy()[0]
-        else:  # random 随机选择
+        else:
             action = np.random.randint(0, n_actions)
         return action
 
+    def action_ranking(self, s):
+        s = Variable(torch.unsqueeze(torch.FloatTensor(s), 0))
+        # input only one sample
+        if np.random.uniform() < epsilon:
+            ranking = self.eval_net(s).data.numpy()
+        else:
+            ranking = np.arange( self.n_actions )
+            rs = np.random.RandomState()
+            rs.shuffle(ranking)
+
+        return ranking
+
     def store_transition(self, s, a, r, s_):
         transition = np.hstack((s, [a, r], s_))
-        # 用新的记忆替换旧的记忆
+
         index = self.memory_counter % memory_capacity
         self.memory[index, :] = transition
         self.memory_counter += 1
@@ -72,12 +84,10 @@ class DQN(object):
     def learn(self):
         n_states = self.n_states_
 
-        # target net 的参数更新
         if self.learn_step_counter % target_replace_iter == 0:
             self.target_net.load_state_dict(self.eval_net.state_dict())
         self.learn_step_counter += 1
 
-        # 取样记忆中的经历
         sample_index = np.random.choice(memory_capacity, batch_size)
         b_memory = self.memory[sample_index, :]
         b_s = Variable(torch.FloatTensor(b_memory[:, :n_states]))
@@ -87,13 +97,13 @@ class DQN(object):
             torch.FloatTensor(b_memory[:, n_states + 1:n_states + 2]))
         b_s_ = Variable(torch.FloatTensor(b_memory[:, -n_states:]))
 
-        # q_eval net 评估状态下动作的 value
-        q_eval = self.eval_net(b_s).gather(1, b_a)  # shape (batch, 1) 选择对应 action 的动作
+        q_eval = self.eval_net(b_s).gather(1, b_a)
         q_next = self.target_net(
             b_s_).detach()  # detach from graph, don't backpropagate
         q_target = b_r + gamma * q_next.max(1)[0].view(batch_size, 1)  # shape (batch, 1)
-        loss = self.criterion(q_eval, q_target) # mse 作为 loss 函数
-        # 更新网络
+        loss = self.criterion(q_eval, q_target)
+
+        # update network
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -139,7 +149,6 @@ def main():
             if done:
                 break
             s = s_
-
 
 
 if __name__ == '__main__':

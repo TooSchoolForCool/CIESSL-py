@@ -19,6 +19,7 @@ from model.online_clf import OnlineClassifier
 from model.rank_clf import RankCLF
 from model.rank_fogd import RankFOGD
 from model.trace_tracker import TraceTracker
+from model.dqn import DQN
 import utils
 
 
@@ -293,6 +294,45 @@ def ranking_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature,
         #     evaluator.plot_error_bar(n_bins=10)
 
 
+def rl_mode(voice_data_dir, map_data_dir, pos_tf_dir, voice_feature, map_feature, 
+    voice_encoder_path, save_trace, eval_out_dir, n_trails, n_mic, model_type, lm_param):
+    dl = DataLoader(voice_data_dir, map_data_dir, pos_tf_dir, n_mic, verbose=False)
+    map_data = dl.load_map_info()
+    n_rooms = map_data["n_room"] - 1
+
+    pipe = init_pipeline(voice_feature, map_feature, voice_encoder_path)
+    X, _ = utils.init_training_set(dl, pipe, n_samples=1, seed=random.randint(0, 1000), type="clf")
+    n_states = X.shape[1]
+
+    for t in range(0, n_trails):
+        dqn_trainer = DQN(n_states=n_states, n_actions=n_rooms)
+        evaluator = Evaluator(n_rooms, verbose=True)
+        tracker = TraceTracker(verbose=True)
+
+        for voice in dl.voice_data_iterator(seed=random.randint(0, 1000)):
+            X, y = pipe.prepare_training_data(map_data, voice)
+
+            rank_y = dqn_trainer.action_ranking(X[0])
+            target_y = np.argmax(rank_y)
+
+            if target_y == y:
+                next_s = 1
+                reward = -1
+            else:
+                next_s = 0
+                reward = -1
+            
+            evaluator.evaluate(y, predicted_y)
+
+            if save_trace is not None:
+                tracker.append(predicted_y[0], y[0], voice["mic_room_id"])
+
+        if save_trace is not None:
+            tracker.dump(save_trace, str(t) + "_trace.json")
+        if eval_out_dir is not None:
+            evaluator.save_history(out_dir=eval_out_dir, file_prefix=str(t), type="csv")
+
+
 def train_model():
     args = arg_parser()
 
@@ -304,6 +344,12 @@ def train_model():
             model_type=args.model_type, lm_param=args.lm_param)
     elif args.mode == "rank":
         ranking_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
+            pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
+            voice_encoder_path=args.voice_encoder, save_trace=args.save_trace,
+            eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic,
+            model_type=args.model_type, lm_param=args.lm_param)
+    elif args.mode == "rl":
+        rl_mode(voice_data_dir=args.voice_data, map_data_dir=args.map_data, 
             pos_tf_dir=args.config, voice_feature=args.voice_feature, map_feature=args.map_feature,
             voice_encoder_path=args.voice_encoder, save_trace=args.save_trace,
             eval_out_dir=args.save_train_hist, n_trails=args.n_trails, n_mic=args.n_mic,
