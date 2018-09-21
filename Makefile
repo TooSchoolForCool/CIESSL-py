@@ -38,6 +38,11 @@ save_conv_ae_code:
 	python ciessl_app/tools/save_conv_ae_code.py --data="data/stft_data/train/amp" --out="data/conv_code_256_16" \
 		--model="data/model/stft_cae_subset_256.json"
 
+
+parse_trace:
+	python ciessl_app/tools/parse_trace.py --data="data/trace/3room_trace.json" --out="data/trace_hist"
+
+
 train_autoencoder:
 	python ciessl_app/train_autoencoder.py --data="data/conv_code_256_16" --encoder="denoise_ae" \
 		--out="denoise_ae_inner.model"
