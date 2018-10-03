@@ -8,6 +8,7 @@ examples/*.wav
 *.ply
 # ignore psd and png files
 demo/simulation_screen*
+*.psd
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

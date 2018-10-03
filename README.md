@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/TooSchoolForCool/CIESSL-py.svg?token=pTSTf8Kr3MZ8RE9G5srX&branch=master)](https://travis-ci.com/TooSchoolForCool/CIESSL-py) ![python-2.7](https://img.shields.io/badge/python-2.7-blue.svg)
 
-This repo implements a python application which performs sound source localization in complex indoor environment with the help of a microphone array and the knowledge of the room structure. To support processing audio sources (i.e., microphone array, wave file ...), a python package [voice_engine](#21-voice-engine) has been developed.
+This repo implements a python application which performs sound source localization in complex indoor environment with the help of a microphone array and the knowledge of the room structure. To support processing audio sources (i.e., microphone array, wave file ...), a python package [voice_engine](#2-voice-engine) has been developed.
 
 *Note: This repo is developed under **ubuntu 16.04** with **python 2.7**, other ubuntu distribution may also be compatible.*
 
@@ -15,7 +15,9 @@ sudo apt-get install python-pyaudio libsamplerate0 portaudio19-dev python-tk pyt
 sudo pip install wheel
 ```
 
-Then [PyTorch](https://pytorch.org) needs to be installed, for the use of [ciessl_app](ciessl_app). In this repo, we adopt PyTorch-0.4.1. Try following command to install the PyTorch
+For Python dependencies, Python virtual environment [Virtualenv](https://virtualenv.pypa.io/en/stable/) or [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) is highly recommended. For installation detail, please follow the link above to install the python virtual environment.
+
+Then [PyTorch](https://pytorch.org) needs to be installed, for the use of [ciessl_app](ciessl_app). In this repo, we adopt PyTorch-0.4.1. Try following command to install the PyTorch (Note: to support PyTorch with CUDA acceleration, different commands should be used)
 
 ```bash
 pip install http://download.pytorch.org/whl/cpu/torch-0.4.1-cp27-cp27mu-linux_x86_64.whl
@@ -29,18 +31,19 @@ python setup.py bdist_wheel
 pip install dist/*.whl
 ```
 
-## 2. Package Information
+## 2. Voice Engine
 
-To support our sound source localization solution, several python packages have been implemented. Below is a brief introduction to every package we developed. 
+[voice_engine](voice_engine) is a python package that handles audio sources processing. It includes acquiring data from a microphone array, reading/writing data from/to a .wav file, resampling signal data, Voice Activity Detection (VAD) and Short Time Fourier Transform (STFT). For using the voice engine, several [examples](examples) are provided.
 
-### 2.1 Voice Engine
 
-[voice_engine](voice_engine) is a python package that handles audio sources processing. It includes acquiring data from a microphone array, reading/writing data from/to a .wav file, resampling signal data, Voice Activity Detection (VAD) and Short Time Fourier Transform (STFT).
 
-## 3. CIESSL
-
-### 3.1 Voice Signal Processing
-
-While reading in voice signal data, Voice Activity Detection (VAD) is performed. We then trim out the active voice segment, and a log-scale Short Time Fourier Transform (STFT) is applied to the active voice segment. Finally, we can convert a 1 dimensional voice signal into  2 dimensional spectrogram in Time Frequency (TF) domain.
+While reading in voice signal data, VAD is performed. We then trim out the active voice segment, and a log-scale STFT is applied to the active voice segment. Finally, we can convert a 1 dimensional voice signal into  2 dimensional spectrogram in Time Frequency (TF) domain. Here is a demo of how VAD and STFT is performed. 
 
 ![voice_process_demo](demo/voice_process_demo.png)
+
+
+
+## 3. Sound Source Localization (SSL)
+
+
+
